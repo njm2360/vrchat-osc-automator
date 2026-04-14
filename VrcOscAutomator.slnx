@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="VrcOscAutomator/VrcOscAutomator.csproj" />
+  <Project Path="VrcOscAutomator.Tests/VrcOscAutomator.Tests.csproj" />
+</Solution>

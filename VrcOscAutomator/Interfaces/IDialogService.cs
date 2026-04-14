@@ -1,0 +1,18 @@
+using VrcOscAutomator.Models;
+
+namespace VrcOscAutomator.Interfaces;
+
+public interface IDialogService
+{
+    void ShowExportDialog(string base64);
+
+    string? ShowImportDialog();
+
+    bool ConfirmOverwrite();
+
+    void ShowError(string message);
+
+    IReadOnlyList<OscTarget>? ShowSendTargetsWindow(IEnumerable<OscTarget> currentTargets);
+
+    HotkeySettings? ShowHotkeySettingsWindow(HotkeySettings currentSettings);
+}
