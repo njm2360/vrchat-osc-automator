@@ -12,8 +12,10 @@ public sealed class MouseSenderService : IMouseSender
     [DllImport("user32.dll")]
     private static extern int GetSystemMetrics(int nIndex);
 
-    private const int SM_CXSCREEN = 0;
-    private const int SM_CYSCREEN = 1;
+    private const int SM_XVIRTUALSCREEN = 76;
+    private const int SM_YVIRTUALSCREEN = 77;
+    private const int SM_CXVIRTUALSCREEN = 78;
+    private const int SM_CYVIRTUALSCREEN = 79;
 
     private const uint INPUT_MOUSE = 0;
     private const uint MOUSEEVENTF_MOVE = 0x0001;
@@ -24,8 +26,14 @@ public sealed class MouseSenderService : IMouseSender
     private const uint MOUSEEVENTF_MIDDLEDOWN = 0x0020;
     private const uint MOUSEEVENTF_MIDDLEUP = 0x0040;
     private const uint MOUSEEVENTF_WHEEL = 0x0800;
+    private const uint MOUSEEVENTF_VIRTUALDESK = 0x4000;
     private const uint MOUSEEVENTF_ABSOLUTE = 0x8000;
     private const int WHEEL_DELTA = 120;
+
+    private const int SM_CXSCREEN = 0;
+    private const int SM_CYSCREEN = 1;
+
+    public MouseInputMode Mode { get; set; } = MouseInputMode.VirtualDesktop;
 
     // ── P/Invoke 構造体 ──────────────────────────────────────────────────
 
@@ -99,17 +107,32 @@ public sealed class MouseSenderService : IMouseSender
 
     public void SendMouseMove(int x, int y, MouseMoveMode mode)
     {
+        uint flags;
         if (mode == MouseMoveMode.Absolute)
         {
-            int screenW = GetSystemMetrics(SM_CXSCREEN);
-            int screenH = GetSystemMetrics(SM_CYSCREEN);
-            x = (int)((long)x * 65535 / screenW);
-            y = (int)((long)y * 65535 / screenH);
+            if (Mode == MouseInputMode.VirtualDesktop)
+            {
+                int vx = GetSystemMetrics(SM_XVIRTUALSCREEN);
+                int vy = GetSystemMetrics(SM_YVIRTUALSCREEN);
+                int vw = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+                int vh = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+                x = (int)((long)(x - vx) * 65535 / vw);
+                y = (int)((long)(y - vy) * 65535 / vh);
+                flags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK;
+            }
+            else
+            {
+                int sw = GetSystemMetrics(SM_CXSCREEN);
+                int sh = GetSystemMetrics(SM_CYSCREEN);
+                x = (int)((long)x * 65535 / sw);
+                y = (int)((long)y * 65535 / sh);
+                flags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE;
+            }
         }
-
-        uint flags = mode == MouseMoveMode.Absolute
-            ? MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE
-            : MOUSEEVENTF_MOVE;
+        else
+        {
+            flags = MOUSEEVENTF_MOVE;
+        }
 
         INPUT[] inputs = [MakeMouseInput(x, y, 0, flags)];
         SendInput(1, inputs, Marshal.SizeOf<INPUT>());

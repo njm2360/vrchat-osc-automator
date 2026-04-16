@@ -1,8 +1,9 @@
 <Window x:Class="VrcOscAutomator.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-xmlns:vm="clr-namespace:VrcOscAutomator.ViewModels"
+        xmlns:vm="clr-namespace:VrcOscAutomator.ViewModels"
         xmlns:views="clr-namespace:VrcOscAutomator.Views"
+        xmlns:models="clr-namespace:VrcOscAutomator.Models"
         Title="{Binding WindowTitle}"
         Height="400" Width="600"
         ResizeMode="NoResize">
@@ -42,6 +43,27 @@ xmlns:vm="clr-namespace:VrcOscAutomator.ViewModels"
                 <MenuItem Header="キーリピート設定(_R)..."
                           Command="{Binding OpenKeyRepeatSettingsCommand}"
                           IsEnabled="{Binding IsNotPlaying}" />
+                <Separator />
+                <MenuItem Header="キーボード入力モード(_K)">
+                    <MenuItem Header="VKコード" IsCheckable="True"
+                              IsChecked="{Binding IsKeyboardVkMode, Mode=OneWay}"
+                              Command="{Binding SetKeyboardModeCommand}"
+                              CommandParameter="{x:Static models:KeyboardInputMode.VirtualKey}" />
+                    <MenuItem Header="スキャンコード" IsCheckable="True"
+                              IsChecked="{Binding IsKeyboardScanMode, Mode=OneWay}"
+                              Command="{Binding SetKeyboardModeCommand}"
+                              CommandParameter="{x:Static models:KeyboardInputMode.ScanCode}" />
+                </MenuItem>
+                <MenuItem Header="マウス入力モード(_M)">
+                    <MenuItem Header="標準" IsCheckable="True"
+                              IsChecked="{Binding IsMouseStandardMode, Mode=OneWay}"
+                              Command="{Binding SetMouseModeCommand}"
+                              CommandParameter="{x:Static models:MouseInputMode.Standard}" />
+                    <MenuItem Header="仮想" IsCheckable="True"
+                              IsChecked="{Binding IsMouseVirtualDesktopMode, Mode=OneWay}"
+                              Command="{Binding SetMouseModeCommand}"
+                              CommandParameter="{x:Static models:MouseInputMode.VirtualDesktop}" />
+                </MenuItem>
             </MenuItem>
         </Menu>
 

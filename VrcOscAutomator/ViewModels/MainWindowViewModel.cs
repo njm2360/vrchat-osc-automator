@@ -18,6 +18,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly IOscSender _oscSender;
     private readonly IDialogService _dialogService;
     private readonly IGlobalHotkeyService _hotkeyService;
+    private readonly IKeyboardSender _keyboardSender;
+    private readonly IMouseSender _mouseSender;
     private List<OscTarget> _targets = [];
     private HotkeySettings _hotkeys = new();
     private KeyRepeatSettings _keyRepeat = new();
@@ -43,7 +45,21 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public partial int SelectedProfileIndex { get; set; }
 
     [ObservableProperty]
-    private bool _isLoopMode;
+    public partial bool IsLoopMode { get; set; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsKeyboardVkMode))]
+    [NotifyPropertyChangedFor(nameof(IsKeyboardScanMode))]
+    public partial KeyboardInputMode KeyboardMode { get; set; } = KeyboardInputMode.ScanCode;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsMouseStandardMode))]
+    [NotifyPropertyChangedFor(nameof(IsMouseVirtualDesktopMode))]
+    public partial MouseInputMode MouseMode { get; set; } = MouseInputMode.VirtualDesktop;
+
+    public bool IsKeyboardVkMode => KeyboardMode == KeyboardInputMode.VirtualKey;
+    public bool IsKeyboardScanMode => KeyboardMode == KeyboardInputMode.ScanCode;
+    public bool IsMouseStandardMode => MouseMode == MouseInputMode.Standard;
+    public bool IsMouseVirtualDesktopMode => MouseMode == MouseInputMode.VirtualDesktop;
 
     public bool IsNotPlaying => !IsPlaying;
     private bool CanStart => IsNotPlaying
@@ -73,13 +89,17 @@ public sealed partial class MainWindowViewModel : ObservableObject
         IOscSender oscSender,
         IDialogService dialogService,
         ISequenceImportExportService importExport,
-        IGlobalHotkeyService hotkeyService)
+        IGlobalHotkeyService hotkeyService,
+        IKeyboardSender keyboardSender,
+        IMouseSender mouseSender)
     {
         _player = player;
         _repository = repository;
         _oscSender = oscSender;
         _dialogService = dialogService;
         _hotkeyService = hotkeyService;
+        _keyboardSender = keyboardSender;
+        _mouseSender = mouseSender;
 
         _hotkeyService.StartPressed += OnHotkeyStartPressed;
         _hotkeyService.PauseResumePressed += OnHotkeyPauseResumePressed;
@@ -143,6 +163,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _hotkeys = settings.Hotkeys;
         _keyRepeat = settings.KeyRepeat;
         _player.SetKeyRepeatSettings(_keyRepeat);
+        KeyboardMode = settings.Input.KeyboardMode;
+        MouseMode = settings.Input.MouseMode;
+        _keyboardSender.Mode = KeyboardMode;
+        _mouseSender.Mode = MouseMode;
         IsLoopMode = settings.IsLoopMode;
 
         for (int i = 0; i < Profiles.Count && i < settings.Profiles.Count; i++)
@@ -188,6 +212,22 @@ public sealed partial class MainWindowViewModel : ObservableObject
             _player.SetKeyRepeatSettings(_keyRepeat);
             await SaveAsync();
         }
+    }
+
+    [RelayCommand]
+    private async Task SetKeyboardModeAsync(KeyboardInputMode mode)
+    {
+        KeyboardMode = mode;
+        _keyboardSender.Mode = mode;
+        await SaveAsync();
+    }
+
+    [RelayCommand]
+    private async Task SetMouseModeAsync(MouseInputMode mode)
+    {
+        MouseMode = mode;
+        _mouseSender.Mode = mode;
+        await SaveAsync();
     }
 
     [RelayCommand(CanExecute = nameof(CanStart))]
@@ -251,6 +291,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             Profiles = [.. Profiles.Select(p => p.ToModel())],
             Hotkeys = _hotkeys,
             KeyRepeat = _keyRepeat,
+            Input = new InputSettings { KeyboardMode = KeyboardMode, MouseMode = MouseMode },
             IsLoopMode = IsLoopMode,
         };
         await _repository.SaveAsync(settings);
