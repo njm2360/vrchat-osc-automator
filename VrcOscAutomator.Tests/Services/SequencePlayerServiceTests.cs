@@ -169,6 +169,40 @@ public class SequencePlayerServiceTests : IDisposable
         _sender.Verify(s => s.SendInt("/input/Jump", 1), Times.Exactly(6));
     }
 
+    [Fact]
+    public async Task PlayAsync_LoopBlock_RepeatCountZero_LoopsIndefinitely()
+    {
+        // RepeatCount=0 は無限ループ。キャンセルで止まり、3回以上実行されていること
+        using var cts = new CancellationTokenSource();
+        var slots = Slots(
+            new LoopBeginSlot(0),
+            new IntSlot("/input/Jump", 1, 5, false),
+            new LoopEndSlot()
+        );
+
+        Task play = _sut.PlayAsync(slots, loop: false, null, cts.Token);
+        await Task.Delay(100);
+        cts.Cancel();
+        await play;
+
+        _sender.Verify(s => s.SendInt("/input/Jump", 1), Times.AtLeast(3));
+    }
+
+    [Fact]
+    public async Task PlayAsync_LoopTrue_RepeatsSequenceAfterEnd()
+    {
+        // loop=true の場合、全スロット完了後に先頭に戻って繰り返す
+        using var cts = new CancellationTokenSource();
+        var slots = Slots(new IntSlot("/input/Jump", 1, 5, false));
+
+        Task play = _sut.PlayAsync(slots, loop: true, null, cts.Token);
+        await Task.Delay(100);
+        cts.Cancel();
+        await play;
+
+        _sender.Verify(s => s.SendInt("/input/Jump", 1), Times.AtLeast(2));
+    }
+
     // ─── Progress 通知 ───────────────────────────────────────────────────
 
     [Fact]
@@ -304,6 +338,91 @@ public class SequencePlayerServiceTests : IDisposable
 
         // 初回送信 + Resume後の再送 2回
         _sender.Verify(s => s.SendInt("/input/Jump", 1), Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task ResumeAsync_ContinuesFromSameSlot_NotNextSlot()
+    {
+        // Pause → Resume 後、次のスロットに進まず同じスロットに留まること
+        var slots = Slots(
+            new IntSlot("/slot/first",  1, 400, false),
+            new IntSlot("/slot/second", 1,  10, false)
+        );
+
+        Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
+        await Task.Delay(30); // first スロット実行中に Pause
+        await _sut.PauseAsync();
+
+        // Pause 中に second スロットへ進んでいないこと
+        _sender.Verify(s => s.SendInt("/slot/second", 1), Times.Never);
+
+        await _sut.ResumeAsync();
+        await play;
+
+        // Resume 後: first の再送 (初回 + 再送 = 2回) → second が 1回
+        _sender.Verify(s => s.SendInt("/slot/first",  1), Times.Exactly(2));
+        _sender.Verify(s => s.SendInt("/slot/second", 1), Times.Once);
+    }
+
+    [Fact]
+    public async Task StopAsync_WhilePaused_ClearsBothFlags()
+    {
+        // 一時停止中に停止したとき IsPaused/IsPlaying が両方 false になること
+        var slots = Slots(new IntSlot("/input/Jump", 1, 5000, false));
+
+        Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
+        await Task.Delay(30);
+        await _sut.PauseAsync();
+        await _sut.StopAsync();
+        await play;
+
+        _sut.IsPaused.Should().BeFalse();
+        _sut.IsPlaying.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task PauseAsync_ResetOnComplete_True_SendsResetAtPauseTime()
+    {
+        // リセットは Stop 時ではなく Pause 時点で送られること
+        var slots = Slots(new IntSlot("/input/Jump", 1, 5000, true));
+
+        Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
+        await Task.Delay(30);
+        await _sut.PauseAsync();
+        await Task.Delay(20); // Pause が反映されるのを待つ
+
+        // StopAsync 前の時点でリセット済み
+        _sender.Verify(s => s.SendInt("/input/Jump", 0), Times.Once);
+
+        await _sut.StopAsync();
+        await play;
+
+        // Stop 後も追加リセットは発生しない（_activeSlot が Pause 時に null 化されているため）
+        _sender.Verify(s => s.SendInt("/input/Jump", 0), Times.Once);
+    }
+
+    [Fact]
+    public async Task ResumeAsync_RemainingTimePreserved_SlotDoesNotRestartFromFull()
+    {
+        // Pause 後に再開したとき、経過分だけ短くなった残り時間でカウントが再開されること（ストップウォッチ動作）
+        // Duration=400ms のスロット、約30ms 再生後に Pause → 残り約370ms のはず
+        // Pause 中に 500ms 待機（Duration を超える時間）してから Resume しても、
+        // Resume 後に自然完了するまでの追加時間は ~400ms ではなく ~370ms 以内であること
+        var slots = Slots(new IntSlot("/input/Jump", 1, 400, false));
+
+        Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
+        await Task.Delay(30);   // ~30ms 再生
+        await _sut.PauseAsync();
+        await Task.Delay(500);  // Pause 中に Duration を超えて待機（カウントされてはいけない）
+        await _sut.ResumeAsync();
+
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        await play; // 自然完了を待つ
+        sw.Stop();
+
+        // 残り ~370ms で完了するはず。フルで再スタートしていたら ~400ms かかる
+        // ストップウォッチ動作なら 400ms 以内に完了（余裕を持って 450ms をしきい値とする）
+        sw.ElapsedMilliseconds.Should().BeLessThan(450);
     }
 
     // ─── IsPlaying ───────────────────────────────────────────────────────

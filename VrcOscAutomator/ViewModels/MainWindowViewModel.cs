@@ -30,16 +30,16 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(StartCommand))]
     [NotifyCanExecuteChangedFor(nameof(StopCommand))]
     [NotifyCanExecuteChangedFor(nameof(PauseResumeCommand))]
-    private bool _isPlaying;
+    public partial bool IsPlaying { get; set; }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(PauseResumeCommand))]
-    private bool _isPaused;
+    public partial bool IsPaused { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StatusMessage))]
     [NotifyCanExecuteChangedFor(nameof(StartCommand))]
-    private int _selectedProfileIndex;
+    public partial int SelectedProfileIndex { get; set; }
 
     [ObservableProperty]
     private bool _isLoopMode;

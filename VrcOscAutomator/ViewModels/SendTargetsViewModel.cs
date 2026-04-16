@@ -11,7 +11,7 @@ public sealed partial class SendTargetsViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RemoveTargetCommand))]
-    private OscTargetViewModel? _selectedTarget;
+    public partial OscTargetViewModel? SelectedTarget { get; set; }
 
     [RelayCommand]
     private void AddTarget() => Targets.Add(new OscTargetViewModel());

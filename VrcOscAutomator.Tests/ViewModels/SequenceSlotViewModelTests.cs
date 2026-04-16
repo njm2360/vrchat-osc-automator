@@ -9,7 +9,7 @@ public class SequenceSlotViewModelTests
 {
     // ─── ヘルパー ─────────────────────────────────────────────────────────
 
-    private static SlotPreset FloatPreset => SlotPreset.All.First(p => p.IsBuiltinFloat);
+    private static BuiltinPreset FloatPreset => SlotPreset.All.OfType<BuiltinPreset>().First(p => p.IsBuiltinFloat);
     private static SlotPreset IntPreset => SlotPreset.All.First(p => p.IsBuiltinInt);
     private static SlotPreset CustomPreset => SlotPreset.All.First(p => p.IsCustom);
     private static SlotPreset WaitPreset => SlotPreset.All.First(p => p.IsWait);
@@ -58,6 +58,37 @@ public class SequenceSlotViewModelTests
         vm.IsValid.Should().BeFalse();
     }
 
+    [Fact]
+    public void IsValid_CustomPreset_AddressOnlySlash_False()
+    {
+        var vm = new SequenceSlotViewModel
+        {
+            SelectedPreset = CustomPreset,
+            CustomAddress = "/",
+        };
+        vm.IsValid.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData("/my param")]   // スペース
+    [InlineData("/my#param")]   // #
+    [InlineData("/my*param")]   // *
+    [InlineData("/my,param")]   // ,
+    [InlineData("/my?param")]   // ?
+    [InlineData("/my[param")]   // [
+    [InlineData("/my]param")]   // ]
+    [InlineData("/my{param")]   // {
+    [InlineData("/my}param")]   // }
+    public void IsValid_CustomPreset_AddressContainsForbiddenChar_False(string address)
+    {
+        var vm = new SequenceSlotViewModel
+        {
+            SelectedPreset = CustomPreset,
+            CustomAddress = address,
+        };
+        vm.IsValid.Should().BeFalse();
+    }
+
     // ─── BoolValue ────────────────────────────────────────────────────────
 
     [Theory]
@@ -81,6 +112,19 @@ public class SequenceSlotViewModelTests
     public void BoolValue_SetFalse_SetsValueToZero()
     {
         var vm = new SequenceSlotViewModel { BoolValue = false };
+        vm.Value.Should().Be(0f);
+    }
+
+    // ─── CustomValueType 変更 ─────────────────────────────────────────────
+
+    [Fact]
+    public void CustomValueTypeChanged_ResetsValueToZero()
+    {
+        var vm = new SequenceSlotViewModel { SelectedPreset = CustomPreset };
+        vm.Value = 0.75f;
+
+        vm.CustomValueType = OscValueType.Int;
+
         vm.Value.Should().Be(0f);
     }
 
@@ -432,8 +476,8 @@ public class SequenceSlotViewModelTests
         SequenceSlotViewModel vm = SequenceSlotViewModel.FromModel(
             new FloatSlot("/input/Vertical", 0.5f));
 
-        vm.SelectedPreset.IsBuiltinFloat.Should().BeTrue();
-        vm.SelectedPreset.Address.Should().Be("/input/Vertical");
+        vm.SelectedPreset.Should().BeOfType<BuiltinPreset>()
+            .Which.Address.Should().Be("/input/Vertical");
         vm.Value.Should().Be(0.5f);
     }
 
@@ -464,6 +508,7 @@ public class SequenceSlotViewModelTests
     public static TheoryData<SequenceSlot> RoundTripSlots => new()
     {
         new LoopBeginSlot(4),
+        new LoopBeginSlot(0), // RepeatCount=0 は無限ループ
         new LoopEndSlot(),
         new WaitSlot(1000),
         new FloatSlot("/input/Vertical", 0.5f, 300, true),

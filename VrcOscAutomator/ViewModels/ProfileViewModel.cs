@@ -28,7 +28,7 @@ public sealed partial class ProfileViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(CopySlotCommand))]
     [NotifyCanExecuteChangedFor(nameof(MoveUpCommand))]
     [NotifyCanExecuteChangedFor(nameof(MoveDownCommand))]
-    private SequenceSlotViewModel? _selectedSlot;
+    public partial SequenceSlotViewModel? SelectedSlot { get; set; }
 
     public ObservableCollection<SequenceSlotViewModel> Slots { get; }
 

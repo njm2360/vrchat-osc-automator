@@ -6,13 +6,13 @@ namespace VrcOscAutomator.ViewModels;
 public sealed partial class OscTargetViewModel : ObservableObject
 {
     [ObservableProperty]
-    private string _ipAddress = "127.0.0.1";
+    public partial string IpAddress { get; set; } = "127.0.0.1";
 
     [ObservableProperty]
-    private int _port = 9000;
+    public partial int Port { get; set; } = 9000;
 
     [ObservableProperty]
-    private bool _isEnabled = true;
+    public partial bool IsEnabled { get; set; } = true;
 
     public OscTarget ToModel() => new()
     {

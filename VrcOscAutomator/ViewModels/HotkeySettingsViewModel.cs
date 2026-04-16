@@ -13,19 +13,17 @@ public sealed partial class HotkeySettingsViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(StartDisplayText))]
     [NotifyPropertyChangedFor(nameof(IsStartSet))]
     [NotifyCanExecuteChangedFor(nameof(ClearStartCommand))]
-    private HotkeyInfo _startHotkey = new();
-
+    public partial HotkeyInfo StartHotkey { get; set; } = new();
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(PauseDisplayText))]
     [NotifyPropertyChangedFor(nameof(IsPauseSet))]
     [NotifyCanExecuteChangedFor(nameof(ClearPauseCommand))]
-    private HotkeyInfo _pauseHotkey = new();
-
+    public partial HotkeyInfo PauseHotkey { get; set; } = new();
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StopDisplayText))]
     [NotifyPropertyChangedFor(nameof(IsStopSet))]
     [NotifyCanExecuteChangedFor(nameof(ClearStopCommand))]
-    private HotkeyInfo _stopHotkey = new();
+    public partial HotkeyInfo StopHotkey { get; set; } = new();
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsListening))]
@@ -35,7 +33,7 @@ public sealed partial class HotkeySettingsViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(StartDisplayText))]
     [NotifyPropertyChangedFor(nameof(PauseDisplayText))]
     [NotifyPropertyChangedFor(nameof(StopDisplayText))]
-    private ListeningTarget _currentListening = ListeningTarget.None;
+    public partial ListeningTarget CurrentListening { get; set; } = ListeningTarget.None;
 
     public bool IsListening => CurrentListening != ListeningTarget.None;
     public bool IsListeningStart => CurrentListening == ListeningTarget.Start;
