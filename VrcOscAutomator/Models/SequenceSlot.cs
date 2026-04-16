@@ -10,6 +10,11 @@ namespace VrcOscAutomator.Models;
 [JsonDerivedType(typeof(WaitSlot), "wait")]
 [JsonDerivedType(typeof(LoopBeginSlot), "loop_begin")]
 [JsonDerivedType(typeof(LoopEndSlot), "loop_end")]
+[JsonDerivedType(typeof(KeySingleSlot), "key_single")]
+[JsonDerivedType(typeof(KeyTypeStringSlot), "key_type_string")]
+[JsonDerivedType(typeof(MouseButtonSlot), "mouse_button")]
+[JsonDerivedType(typeof(MouseWheelSlot), "mouse_wheel")]
+[JsonDerivedType(typeof(MouseMoveSlot), "mouse_move")]
 public abstract record SequenceSlot;
 
 /// <summary>OSC を送信する基底スロット。</summary>
@@ -54,3 +59,11 @@ public record LoopBeginSlot(int RepeatCount = 2) : SequenceSlot;
 
 /// <summary>繰り返しブロックの終了マーカー。</summary>
 public record LoopEndSlot() : SequenceSlot;
+
+/// <summary>単一キーを PRESS または RELEASE するスロット。</summary>
+public record KeySingleSlot(int VirtualKey, KeyAction Action, int DurationMs = 0) : SequenceSlot;
+
+/// <summary>文字列をキーボード入力として送信するスロット。</summary>
+public record KeyTypeStringSlot(string Text, bool AppendNewline = false, int DurationMs = 0) : SequenceSlot;
+
+public enum KeyAction { Press, Release }

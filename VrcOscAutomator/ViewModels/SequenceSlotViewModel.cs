@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text.RegularExpressions;
 using CommunityToolkit.Mvvm.ComponentModel;
 using VrcOscAutomator.Models;
+using KeyAction = VrcOscAutomator.Models.KeyAction;
 
 namespace VrcOscAutomator.ViewModels;
 
@@ -12,6 +13,7 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
 
     public static IReadOnlyList<SlotPreset> AvailablePresets => SlotPreset.All;
     public static IReadOnlyList<OscValueType> AvailableValueTypes => [OscValueType.Float, OscValueType.Int, OscValueType.Bool, OscValueType.String];
+    public static IReadOnlyList<VirtualKeyItem> AvailableKeys => VirtualKeyItem.All;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowResetOption))]
@@ -20,6 +22,8 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsIntMode))]
     [NotifyPropertyChangedFor(nameof(IsBoolMode))]
     [NotifyPropertyChangedFor(nameof(IsStringMode))]
+    [NotifyPropertyChangedFor(nameof(IsKeyboardSingleMode))]
+    [NotifyPropertyChangedFor(nameof(IsKeyboardTypeStringMode))]
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
     [NotifyPropertyChangedFor(nameof(Value))]
     [NotifyPropertyChangedFor(nameof(IsValid))]
@@ -62,6 +66,41 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
     public partial int RepeatCount { get; set; } = 2;
 
+    // ── キーボード (単押し) ────────────────────────────────────────────
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
+    private VirtualKeyItem _selectedKey = VirtualKeyItem.All[0];
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
+    [NotifyPropertyChangedFor(nameof(IsKeyActionPress))]
+    [NotifyPropertyChangedFor(nameof(IsKeyActionRelease))]
+    private KeyAction _selectedKeyAction = KeyAction.Press;
+
+    /// <summary>RadioButton バインディング用。</summary>
+    public bool IsKeyActionPress
+    {
+        get => SelectedKeyAction == KeyAction.Press;
+        set { if (value) SelectedKeyAction = KeyAction.Press; }
+    }
+
+    public bool IsKeyActionRelease
+    {
+        get => SelectedKeyAction == KeyAction.Release;
+        set { if (value) SelectedKeyAction = KeyAction.Release; }
+    }
+
+    // ── キーボード (文字入力) ─────────────────────────────────────────
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
+    private string _typeText = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
+    private bool _appendNewline;
+
     /// <summary>Bool 型の値を bool として読み書きするビュー用プロパティ。</summary>
     public bool BoolValue
     {
@@ -74,6 +113,10 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
     public bool ShowResetOption => SelectedPreset is BuiltinPreset;
 
     public bool IsDurationEditable => SelectedPreset is not (LoopBeginPreset or LoopEndPreset);
+
+    public bool IsKeyboardSingleMode => SelectedPreset is KeySinglePreset;
+
+    public bool IsKeyboardTypeStringMode => SelectedPreset is KeyTypeStringPreset;
 
     private OscValueType? EffectiveValueType => SelectedPreset switch
     {
@@ -92,12 +135,18 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
         LoopBeginPreset => RepeatCount == 0 ? "× ∞ 回" : $"× {RepeatCount} 回",
         LoopEndPreset => "—",
         WaitPreset => "—",
+        KeySinglePreset => $"{SelectedKey.Name} [{(SelectedKeyAction == KeyAction.Press ? "PRESS" : "RELEASE")}]",
+        KeyTypeStringPreset => TypeText.Length == 0
+            ? "(未入力)"
+            : $"\"{Truncate(TypeText, 20)}\"{(AppendNewline ? " ↵" : "")}",
         CustomPreset => CustomAddress.Length > 0
                                ? $"{CustomAddress} [{CustomValueType}] = {ValueSummary}"
                                : $"(アドレス未設定) [{CustomValueType}] = {ValueSummary}",
         BuiltinPreset { ValueType: OscValueType.Int } => (int)Value == 1 ? "1 (ON)" : "0 (OFF)",
         _ => $"{Value:F2}",
     };
+
+    private static string Truncate(string s, int max) => s.Length <= max ? s : s[..max] + "…";
 
     private string ValueSummary => CustomValueType switch
     {
@@ -112,6 +161,8 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
         LoopBeginPreset => new LoopBeginSlot(RepeatCount),
         LoopEndPreset => new LoopEndSlot(),
         WaitPreset => new WaitSlot(DurationMs),
+        KeySinglePreset => new KeySingleSlot(SelectedKey.Code, SelectedKeyAction, DurationMs),
+        KeyTypeStringPreset => new KeyTypeStringSlot(TypeText, AppendNewline, DurationMs),
         BuiltinPreset bp => OscSlot(bp.Address, bp.ValueType),
         CustomPreset => OscSlot(CustomAddress, CustomValueType),
         _ => throw new UnreachableException(),
@@ -130,6 +181,20 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
         LoopBeginSlot lb => new() { SelectedPreset = SlotPreset.All.OfType<LoopBeginPreset>().First(), RepeatCount = lb.RepeatCount },
         LoopEndSlot => new() { SelectedPreset = SlotPreset.All.OfType<LoopEndPreset>().First() },
         WaitSlot w => new() { SelectedPreset = SlotPreset.All.OfType<WaitPreset>().First(), DurationMs = w.DurationMs },
+        KeySingleSlot ks => new()
+        {
+            SelectedPreset = SlotPreset.All.OfType<KeySinglePreset>().First(),
+            SelectedKey = VirtualKeyItem.All.FirstOrDefault(k => k.Code == ks.VirtualKey) ?? VirtualKeyItem.All[0],
+            SelectedKeyAction = ks.Action,
+            DurationMs = ks.DurationMs,
+        },
+        KeyTypeStringSlot kts => new()
+        {
+            SelectedPreset = SlotPreset.All.OfType<KeyTypeStringPreset>().First(),
+            TypeText = kts.Text,
+            AppendNewline = kts.AppendNewline,
+            DurationMs = kts.DurationMs,
+        },
         FloatSlot f => BuildOscVm(f.Address, OscValueType.Float, f.Value, null, f.DurationMs, f.ResetOnComplete),
         IntSlot n => BuildOscVm(n.Address, OscValueType.Int, n.Value, null, n.DurationMs, n.ResetOnComplete),
         BoolSlot b => BuildOscVm(b.Address, OscValueType.Bool, b.Value ? 1f : 0f, null, b.DurationMs, b.ResetOnComplete),

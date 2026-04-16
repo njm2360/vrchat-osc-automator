@@ -10,11 +10,12 @@ namespace VrcOscAutomator.Tests.Services;
 public class SequencePlayerServiceTests : IDisposable
 {
     private readonly Mock<IOscSender> _sender = new(MockBehavior.Loose);
+    private readonly Mock<IKeyboardSender> _keyboard = new(MockBehavior.Loose);
     private readonly SequencePlayerService _sut;
 
     public SequencePlayerServiceTests()
     {
-        _sut = new SequencePlayerService(_sender.Object);
+        _sut = new SequencePlayerService(_sender.Object, _keyboard.Object);
     }
 
     public void Dispose() => _sut.Dispose();

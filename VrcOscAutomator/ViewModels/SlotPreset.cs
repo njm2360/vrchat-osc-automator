@@ -13,6 +13,8 @@ public abstract record SlotPreset(string Name)
     public bool IsLoopBegin => this is LoopBeginPreset;
     public bool IsLoopEnd => this is LoopEndPreset;
     public bool IsLoopMarker => this is LoopBeginPreset or LoopEndPreset;
+    public bool IsKeyboardSingle => this is KeySinglePreset;
+    public bool IsKeyboardTypeString => this is KeyTypeStringPreset;
 
     // ─── 定義済みプリセット一覧 ───────────────────────────────────────
     public static readonly IReadOnlyList<SlotPreset> All =
@@ -59,6 +61,10 @@ public abstract record SlotPreset(string Name)
         new BuiltinPreset("クイックメニュー右",   "/input/QuickMenuToggleRight",  OscValueType.Int),
         new BuiltinPreset("ボイス",               "/input/Voice",                 OscValueType.Int),
 
+        // キーボード
+        new KeySinglePreset("キー送信"),
+        new KeyTypeStringPreset("文字入力"),
+
         // カスタム
         new CustomPreset("カスタム"),
     ];
@@ -73,3 +79,7 @@ public sealed record LoopEndPreset(string Name) : SlotPreset(Name);
 public sealed record CustomPreset(string Name) : SlotPreset(Name);
 
 public sealed record BuiltinPreset(string Name, string Address, OscValueType ValueType) : SlotPreset(Name);
+
+public sealed record KeySinglePreset(string Name) : SlotPreset(Name);
+
+public sealed record KeyTypeStringPreset(string Name) : SlotPreset(Name);

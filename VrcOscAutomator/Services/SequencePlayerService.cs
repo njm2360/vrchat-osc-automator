@@ -3,7 +3,7 @@ using VrcOscAutomator.Models;
 
 namespace VrcOscAutomator.Services;
 
-public sealed class SequencePlayerService(IOscSender oscSender) : ISequencePlayer
+public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender keyboardSender) : ISequencePlayer
 {
     private CancellationTokenSource? _stopCts;
 
@@ -88,6 +88,8 @@ public sealed class SequencePlayerService(IOscSender oscSender) : ISequencePlaye
                     {
                         OscSlot osc => osc.DurationMs,
                         WaitSlot w => w.DurationMs,
+                        KeySingleSlot ks => ks.DurationMs,
+                        KeyTypeStringSlot kts => kts.DurationMs,
                         _ => 0,
                     };
 
@@ -95,6 +97,17 @@ public sealed class SequencePlayerService(IOscSender oscSender) : ISequencePlaye
                     {
                         _activeSlot = activeOsc;
                         SendCommand(activeOsc);
+                    }
+
+                    switch (slot)
+                    {
+                        case KeySingleSlot ks:
+                            keyboardSender.SendKey(ks.VirtualKey, ks.Action);
+                            break;
+                        case KeyTypeStringSlot kts:
+                            string text = kts.AppendNewline ? kts.Text + "\n" : kts.Text;
+                            keyboardSender.TypeString(text);
+                            break;
                     }
 
                     await SlotDelayAsync(activeOsc, durationMs, stopCt);

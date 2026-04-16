@@ -170,6 +170,45 @@
                                        Foreground="#888" FontStyle="Italic"
                                        Visibility="{Binding SelectedPreset.IsLoopEnd, Converter={StaticResource BoolToVis}}" />
 
+                            <!-- キー送信(単押し) -->
+                            <StackPanel Visibility="{Binding SelectedPreset.IsKeyboardSingle, Converter={StaticResource BoolToVis}}">
+                                <!-- アクション (PRESS / RELEASE) -->
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                    <TextBlock Text="アクション:" Width="96"
+                                               VerticalAlignment="Center" Foreground="#444" />
+                                    <RadioButton Content="PRESS" Margin="0,0,16,0"
+                                                 IsChecked="{Binding IsKeyActionPress, UpdateSourceTrigger=PropertyChanged}"
+                                                 VerticalAlignment="Center" />
+                                    <RadioButton Content="RELEASE"
+                                                 IsChecked="{Binding IsKeyActionRelease, UpdateSourceTrigger=PropertyChanged}"
+                                                 VerticalAlignment="Center" />
+                                </StackPanel>
+                                <!-- キー選択 -->
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="キー:" Width="96"
+                                               VerticalAlignment="Center" Foreground="#444" />
+                                    <ComboBox ItemsSource="{Binding AvailableKeys}"
+                                              SelectedItem="{Binding SelectedKey, UpdateSourceTrigger=PropertyChanged}"
+                                              DisplayMemberPath="Name"
+                                              Width="160"
+                                              VerticalAlignment="Center" />
+                                </StackPanel>
+                            </StackPanel>
+
+                            <!-- 文字入力 -->
+                            <StackPanel Visibility="{Binding SelectedPreset.IsKeyboardTypeString, Converter={StaticResource BoolToVis}}">
+                                <!-- テキスト -->
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                    <TextBlock Text="テキスト:" Width="96"
+                                               VerticalAlignment="Center" Foreground="#444" />
+                                    <TextBox Text="{Binding TypeText, UpdateSourceTrigger=PropertyChanged}"
+                                             Width="260" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <!-- 改行チェック -->
+                                <CheckBox Content="末尾に改行を追加 (Enter キー)"
+                                          IsChecked="{Binding AppendNewline, UpdateSourceTrigger=PropertyChanged}"
+                                          Margin="96,0,0,0" />
+                            </StackPanel>
 
                         </StackPanel>
 
