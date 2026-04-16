@@ -337,7 +337,21 @@
                         <DataTemplate DataType="{x:Type vm:SequenceSlotViewModel}">
                             <ComboBox ItemsSource="{Binding AvailablePresets}"
                                       SelectedItem="{Binding SelectedPreset, UpdateSourceTrigger=PropertyChanged}"
-                                      DisplayMemberPath="Name" />
+                                      IsSynchronizedWithCurrentItem="False"
+                                      DisplayMemberPath="Name">
+                                <ComboBox.GroupStyle>
+                                    <GroupStyle>
+                                        <GroupStyle.HeaderTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Name}"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="Gray"
+                                                           Margin="4,4,0,2" />
+                                            </DataTemplate>
+                                        </GroupStyle.HeaderTemplate>
+                                    </GroupStyle>
+                                </ComboBox.GroupStyle>
+                            </ComboBox>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>

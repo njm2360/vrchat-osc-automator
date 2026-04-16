@@ -1,5 +1,7 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
+using System.Windows.Data;
 using CommunityToolkit.Mvvm.ComponentModel;
 using VrcOscAutomator.Models;
 using KeyAction = VrcOscAutomator.Models.KeyAction;
@@ -13,7 +15,14 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
     [GeneratedRegex(@"^(/[^ #*,?/\[\]{}]+)+$")]
     private static partial Regex OscAddressRegex();
 
-    public static IReadOnlyList<SlotPreset> AvailablePresets => SlotPreset.All;
+    public static ListCollectionView AvailablePresets { get; } = CreateGroupedPresets();
+
+    private static ListCollectionView CreateGroupedPresets()
+    {
+        var view = new ListCollectionView(SlotPreset.All as System.Collections.IList ?? SlotPreset.All.ToList());
+        view.GroupDescriptions.Add(new PropertyGroupDescription(nameof(SlotPreset.Category)));
+        return view;
+    }
     public static IReadOnlyList<OscValueType> AvailableValueTypes => [OscValueType.Float, OscValueType.Int, OscValueType.Bool, OscValueType.String];
     public static IReadOnlyList<VirtualKeyItem> AvailableKeys => VirtualKeyItem.All;
 

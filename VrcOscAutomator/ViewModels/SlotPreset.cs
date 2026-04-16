@@ -4,6 +4,15 @@ namespace VrcOscAutomator.ViewModels;
 
 public abstract record SlotPreset(string Name)
 {
+    // ── カテゴリ ──────────────────────────────────────────────────────
+    public string Category => this switch
+    {
+        WaitPreset or LoopBeginPreset or LoopEndPreset or BreakpointPreset => "シーケンス制御",
+        KeySinglePreset or KeyTypeStringPreset => "キーボード",
+        MouseButtonPreset or MouseWheelPreset or MouseMovePreset => "マウス",
+        _ => "OSC",
+    };
+
     // ── XAML バインディング用プロパティ──
     public bool IsBuiltinPreset => this is BuiltinPreset;
     public bool IsBuiltinFloat => this is BuiltinPreset { ValueType: OscValueType.Float };
@@ -28,8 +37,17 @@ public abstract record SlotPreset(string Name)
         new LoopBeginPreset("繰り返し開始"),
         new LoopEndPreset("繰り返し終了"),
         new BreakpointPreset("ブレークポイント"),
+        
+        // キーボード
+        new KeySinglePreset("キー送信"),
+        new KeyTypeStringPreset("文字入力"),
 
-        // Float (-1.0 〜 +1.0)
+        // マウス
+        new MouseButtonPreset("マウスボタン"),
+        new MouseWheelPreset("マウスホイール"),
+        new MouseMovePreset("マウス移動"),
+
+        // OSC
         new BuiltinPreset("前後(軸)",             "/input/Vertical",              OscValueType.Float),
         new BuiltinPreset("左右(軸)",             "/input/Horizontal",            OscValueType.Float),
         new BuiltinPreset("水平視点回転",         "/input/LookHorizontal",        OscValueType.Float),
@@ -40,7 +58,6 @@ public abstract record SlotPreset(string Name)
         new BuiltinPreset("保持:回転(上下)",      "/input/SpinHoldUD",            OscValueType.Float),
         new BuiltinPreset("保持:回転(左右)",      "/input/SpinHoldLR",            OscValueType.Float),
 
-        // Int 移動 (0 / 1)
         new BuiltinPreset("前進",                 "/input/MoveForward",           OscValueType.Int),
         new BuiltinPreset("後退",                 "/input/MoveBackward",          OscValueType.Int),
         new BuiltinPreset("左移動",               "/input/MoveLeft",              OscValueType.Int),
@@ -52,7 +69,6 @@ public abstract record SlotPreset(string Name)
         new BuiltinPreset("スナップターン左",     "/input/ComfortLeft",           OscValueType.Int),
         new BuiltinPreset("スナップターン右",     "/input/ComfortRight",          OscValueType.Int),
 
-        // Int 手操作 (0 / 1)
         new BuiltinPreset("右手グラブ",           "/input/GrabRight",             OscValueType.Int),
         new BuiltinPreset("右手使用",             "/input/UseRight",              OscValueType.Int),
         new BuiltinPreset("右手ドロップ",         "/input/DropRight",             OscValueType.Int),
@@ -60,22 +76,11 @@ public abstract record SlotPreset(string Name)
         new BuiltinPreset("左手使用",             "/input/UseLeft",               OscValueType.Int),
         new BuiltinPreset("左手ドロップ",         "/input/DropLeft",              OscValueType.Int),
 
-        // Int その他 (0 / 1)
         new BuiltinPreset("パニックボタン",       "/input/PanicButton",           OscValueType.Int),
         new BuiltinPreset("クイックメニュー左",   "/input/QuickMenuToggleLeft",   OscValueType.Int),
         new BuiltinPreset("クイックメニュー右",   "/input/QuickMenuToggleRight",  OscValueType.Int),
         new BuiltinPreset("ボイス",               "/input/Voice",                 OscValueType.Int),
 
-        // キーボード
-        new KeySinglePreset("キー送信"),
-        new KeyTypeStringPreset("文字入力"),
-
-        // マウス
-        new MouseButtonPreset("マウスボタン"),
-        new MouseWheelPreset("マウスホイール"),
-        new MouseMovePreset("マウス移動"),
-
-        // カスタム
         new CustomPreset("カスタム"),
     ];
 }
