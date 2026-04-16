@@ -13,7 +13,7 @@ public sealed class SequencePlayerService(IOscSender oscSender) : ISequencePlaye
 
     private Task _playTask = Task.CompletedTask;
 
-    private SequenceSlot? _activeSlot;
+    private OscSlot? _activeSlot;
 
     public bool IsPlaying => !_playTask.IsCompleted;
     public bool IsPaused { get; private set; }
@@ -54,15 +54,15 @@ public sealed class SequencePlayerService(IOscSender oscSender) : ISequencePlaye
                     SequenceSlot slot = slots[i];
 
                     // ── 繰り返し開始マーカー ──────────────────────────
-                    if (slot.SlotType == SlotType.LoopBegin)
+                    if (slot is LoopBeginSlot lb)
                     {
-                        loopStack.Push((i, slot.RepeatCount));
+                        loopStack.Push((i, lb.RepeatCount));
                         i++;
                         continue;
                     }
 
                     // ── 繰り返し終了マーカー ──────────────────────────
-                    if (slot.SlotType == SlotType.LoopEnd)
+                    if (slot is LoopEndSlot)
                     {
                         if (loopStack.Count > 0)
                         {
@@ -79,16 +79,27 @@ public sealed class SequencePlayerService(IOscSender oscSender) : ISequencePlaye
                         continue;
                     }
 
-                    // ── 通常スロット ──────────────────────────────────
+                    // ── 通常スロット（WaitSlot / OscSlot）──────────────
                     CurrentSlotIndex = i;
                     slotProgress?.Report(i);
 
-                    _activeSlot = slot;
-                    SendCommand(slot);
+                    OscSlot? activeOsc = slot as OscSlot;
+                    int durationMs = slot switch
+                    {
+                        OscSlot osc => osc.DurationMs,
+                        WaitSlot w => w.DurationMs,
+                        _ => 0,
+                    };
 
-                    await SlotDelayAsync(slot, slot.DurationMs, stopCt);
+                    if (activeOsc is not null)
+                    {
+                        _activeSlot = activeOsc;
+                        SendCommand(activeOsc);
+                    }
 
-                    if (slot.ResetOnComplete) ResetSlotValue(slot);
+                    await SlotDelayAsync(activeOsc, durationMs, stopCt);
+
+                    if (activeOsc is { ResetOnComplete: true }) ResetSlotValue(activeOsc);
                     _activeSlot = null; // 正常完了済み — finally で二重リセットしない
 
                     i++;
@@ -102,14 +113,14 @@ public sealed class SequencePlayerService(IOscSender oscSender) : ISequencePlaye
         }
         finally
         {
-            if (_activeSlot is not null && _activeSlot.ResetOnComplete) ResetSlotValue(_activeSlot);
+            if (_activeSlot is { ResetOnComplete: true }) ResetSlotValue(_activeSlot);
             _activeSlot = null;
             CurrentSlotIndex = -1;
             slotProgress?.Report(-1);
         }
     }
 
-    private async Task SlotDelayAsync(SequenceSlot slot, int totalMs, CancellationToken stopCt)
+    private async Task SlotDelayAsync(OscSlot? slot, int totalMs, CancellationToken stopCt)
     {
         int remaining = totalMs;
 
@@ -145,7 +156,7 @@ public sealed class SequencePlayerService(IOscSender oscSender) : ISequencePlaye
             if (remaining <= 0) return;
 
             // 一時停止中
-            if (slot.ResetOnComplete)
+            if (slot is { ResetOnComplete: true })
             {
                 ResetSlotValue(slot);
                 _activeSlot = null;
@@ -155,8 +166,11 @@ public sealed class SequencePlayerService(IOscSender oscSender) : ISequencePlaye
             await _resumeSignal.WaitAsync(stopCt);
 
             // 再開
-            _activeSlot = slot;
-            SendCommand(slot);
+            if (slot is not null)
+            {
+                _activeSlot = slot;
+                SendCommand(slot);
+            }
         }
     }
 
@@ -183,27 +197,25 @@ public sealed class SequencePlayerService(IOscSender oscSender) : ISequencePlaye
         try { await _playTask; } catch { }
     }
 
-    private void SendCommand(SequenceSlot slot)
+    private void SendCommand(OscSlot slot)
     {
-        if (slot.Address is not { Length: > 0 }) return;
-        switch (slot.ValueType)
+        switch (slot)
         {
-            case OscValueType.Int: oscSender.SendInt(slot.Address, (int)slot.Value); break;
-            case OscValueType.Bool: oscSender.SendBool(slot.Address, slot.Value != 0f); break;
-            case OscValueType.String: oscSender.SendString(slot.Address, slot.StringValue); break;
-            default: oscSender.SendFloat(slot.Address, slot.Value); break;
+            case FloatSlot f: oscSender.SendFloat(f.Address, f.Value); break;
+            case IntSlot n: oscSender.SendInt(n.Address, n.Value); break;
+            case BoolSlot b: oscSender.SendBool(b.Address, b.Value); break;
+            case StringSlot s: oscSender.SendString(s.Address, s.Value); break;
         }
     }
 
-    private void ResetSlotValue(SequenceSlot slot)
+    private void ResetSlotValue(OscSlot slot)
     {
-        if (slot.Address is not { Length: > 0 }) return;
-        switch (slot.ValueType)
+        switch (slot)
         {
-            case OscValueType.Int: oscSender.SendInt(slot.Address, 0); break;
-            case OscValueType.Bool: oscSender.SendBool(slot.Address, false); break;
-            case OscValueType.String: oscSender.SendString(slot.Address, string.Empty); break;
-            default: oscSender.SendFloat(slot.Address, 0f); break;
+            case FloatSlot f: oscSender.SendFloat(f.Address, 0f); break;
+            case IntSlot n: oscSender.SendInt(n.Address, 0); break;
+            case BoolSlot b: oscSender.SendBool(b.Address, false); break;
+            case StringSlot s: oscSender.SendString(s.Address, string.Empty); break;
         }
     }
 

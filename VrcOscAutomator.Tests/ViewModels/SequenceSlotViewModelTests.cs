@@ -317,8 +317,8 @@ public class SequenceSlotViewModelTests
 
         SequenceSlot model = vm.ToModel();
 
-        model.SlotType.Should().Be(SlotType.LoopBegin);
-        model.RepeatCount.Should().Be(3);
+        model.Should().BeOfType<LoopBeginSlot>();
+        ((LoopBeginSlot)model).RepeatCount.Should().Be(3);
     }
 
     [Fact]
@@ -328,19 +328,18 @@ public class SequenceSlotViewModelTests
 
         SequenceSlot model = vm.ToModel();
 
-        model.SlotType.Should().Be(SlotType.LoopEnd);
+        model.Should().BeOfType<LoopEndSlot>();
     }
 
     [Fact]
-    public void ToModel_WaitPreset_ReturnsNullAddress()
+    public void ToModel_WaitPreset_ReturnsWaitSlot()
     {
         var vm = new SequenceSlotViewModel { SelectedPreset = WaitPreset, DurationMs = 800 };
 
         SequenceSlot model = vm.ToModel();
 
-        model.Address.Should().BeNull();
-        model.SlotType.Should().Be(SlotType.Normal);
-        model.DurationMs.Should().Be(800);
+        model.Should().BeOfType<WaitSlot>();
+        ((WaitSlot)model).DurationMs.Should().Be(800);
     }
 
     [Fact]
@@ -356,12 +355,12 @@ public class SequenceSlotViewModelTests
 
         SequenceSlot model = vm.ToModel();
 
-        model.Address.Should().Be(FloatPreset.Address);
-        model.Value.Should().Be(0.8f);
-        model.ValueType.Should().Be(OscValueType.Float);
-        model.DurationMs.Should().Be(300);
-        model.ResetOnComplete.Should().BeFalse();
-        model.SlotType.Should().Be(SlotType.Normal);
+        model.Should().BeOfType<FloatSlot>();
+        var f = (FloatSlot)model;
+        f.Address.Should().Be(FloatPreset.Address);
+        f.Value.Should().Be(0.8f);
+        f.DurationMs.Should().Be(300);
+        f.ResetOnComplete.Should().BeFalse();
     }
 
     [Fact]
@@ -377,13 +376,14 @@ public class SequenceSlotViewModelTests
 
         SequenceSlot model = vm.ToModel();
 
-        model.Address.Should().Be("/my/str");
-        model.ValueType.Should().Be(OscValueType.String);
-        model.StringValue.Should().Be("hello");
+        model.Should().BeOfType<StringSlot>();
+        var s = (StringSlot)model;
+        s.Address.Should().Be("/my/str");
+        s.Value.Should().Be("hello");
     }
 
     [Fact]
-    public void ToModel_CustomNonStringPreset_StringValueIsEmpty()
+    public void ToModel_CustomIntPreset_ReturnsIntSlot()
     {
         var vm = new SequenceSlotViewModel
         {
@@ -395,7 +395,7 @@ public class SequenceSlotViewModelTests
 
         SequenceSlot model = vm.ToModel();
 
-        model.StringValue.Should().BeEmpty();
+        model.Should().BeOfType<IntSlot>();
     }
 
     // ─── FromModel ────────────────────────────────────────────────────────
@@ -403,9 +403,7 @@ public class SequenceSlotViewModelTests
     [Fact]
     public void FromModel_LoopBeginSlot_SelectsLoopBeginPreset()
     {
-        var slot = new SequenceSlot { SlotType = SlotType.LoopBegin, RepeatCount = 5 };
-
-        SequenceSlotViewModel vm = SequenceSlotViewModel.FromModel(slot);
+        SequenceSlotViewModel vm = SequenceSlotViewModel.FromModel(new LoopBeginSlot(5));
 
         vm.SelectedPreset.IsLoopBegin.Should().BeTrue();
         vm.RepeatCount.Should().Be(5);
@@ -414,19 +412,15 @@ public class SequenceSlotViewModelTests
     [Fact]
     public void FromModel_LoopEndSlot_SelectsLoopEndPreset()
     {
-        var slot = new SequenceSlot { SlotType = SlotType.LoopEnd };
-
-        SequenceSlotViewModel vm = SequenceSlotViewModel.FromModel(slot);
+        SequenceSlotViewModel vm = SequenceSlotViewModel.FromModel(new LoopEndSlot());
 
         vm.SelectedPreset.IsLoopEnd.Should().BeTrue();
     }
 
     [Fact]
-    public void FromModel_NullAddress_SelectsWaitPreset()
+    public void FromModel_WaitSlot_SelectsWaitPreset()
     {
-        var slot = new SequenceSlot { Address = null, DurationMs = 500 };
-
-        SequenceSlotViewModel vm = SequenceSlotViewModel.FromModel(slot);
+        SequenceSlotViewModel vm = SequenceSlotViewModel.FromModel(new WaitSlot(500));
 
         vm.SelectedPreset.IsWait.Should().BeTrue();
         vm.DurationMs.Should().Be(500);
@@ -435,14 +429,8 @@ public class SequenceSlotViewModelTests
     [Fact]
     public void FromModel_KnownAddress_SelectsMatchingPreset()
     {
-        var slot = new SequenceSlot
-        {
-            Address = "/input/Vertical",
-            Value = 0.5f,
-            ValueType = OscValueType.Float,
-        };
-
-        SequenceSlotViewModel vm = SequenceSlotViewModel.FromModel(slot);
+        SequenceSlotViewModel vm = SequenceSlotViewModel.FromModel(
+            new FloatSlot("/input/Vertical", 0.5f));
 
         vm.SelectedPreset.IsBuiltinFloat.Should().BeTrue();
         vm.SelectedPreset.Address.Should().Be("/input/Vertical");
@@ -452,15 +440,8 @@ public class SequenceSlotViewModelTests
     [Fact]
     public void FromModel_UnknownAddress_SelectsCustomPreset()
     {
-        var slot = new SequenceSlot
-        {
-            Address = "/custom/unknown",
-            Value = 1f,
-            ValueType = OscValueType.Int,
-            StringValue = "",
-        };
-
-        SequenceSlotViewModel vm = SequenceSlotViewModel.FromModel(slot);
+        SequenceSlotViewModel vm = SequenceSlotViewModel.FromModel(
+            new IntSlot("/custom/unknown", 1));
 
         vm.SelectedPreset.IsCustom.Should().BeTrue();
         vm.CustomAddress.Should().Be("/custom/unknown");
@@ -476,17 +457,18 @@ public class SequenceSlotViewModelTests
         SequenceSlotViewModel vm = SequenceSlotViewModel.FromModel(original);
         SequenceSlot restored = vm.ToModel();
 
-        restored.Should().BeEquivalentTo(original);
+        // レコードの値等価性で比較（LoopEndSlot のようにメンバーがない型にも対応）
+        restored.Should().Be(original);
     }
 
     public static TheoryData<SequenceSlot> RoundTripSlots => new()
     {
-        new SequenceSlot { SlotType = SlotType.LoopBegin, RepeatCount = 4 },
-        new SequenceSlot { SlotType = SlotType.LoopEnd },
-        new SequenceSlot { Address = null, DurationMs = 1000, ResetOnComplete = true },
-        new SequenceSlot { Address = "/input/Vertical", Value = 0.5f, ValueType = OscValueType.Float, DurationMs = 300, ResetOnComplete = true },
-        new SequenceSlot { Address = "/input/Jump",     Value = 1f,   ValueType = OscValueType.Int,   DurationMs = 200, ResetOnComplete = false },
-        new SequenceSlot { Address = "/custom/x",       Value = 0f,   ValueType = OscValueType.Bool,  DurationMs = 100, ResetOnComplete = true },
-        new SequenceSlot { Address = "/custom/s", StringValue = "hi", ValueType = OscValueType.String, DurationMs = 50 },
+        new LoopBeginSlot(4),
+        new LoopEndSlot(),
+        new WaitSlot(1000),
+        new FloatSlot("/input/Vertical", 0.5f, 300, true),
+        new IntSlot("/input/Jump",       1,    200, false),
+        new BoolSlot("/custom/x",        false, 100, true),
+        new StringSlot("/custom/s",      "hi",  50),
     };
 }

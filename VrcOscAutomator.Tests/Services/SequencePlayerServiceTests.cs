@@ -24,14 +24,7 @@ public class SequencePlayerServiceTests : IDisposable
     [Fact]
     public async Task PlayAsync_FloatSlot_SendsFloat()
     {
-        var slots = Slots(new SequenceSlot
-        {
-            Address = "/input/Vertical",
-            Value = 0.5f,
-            ValueType = OscValueType.Float,
-            DurationMs = 10,
-            ResetOnComplete = false,
-        });
+        var slots = Slots(new FloatSlot("/input/Vertical", 0.5f, 10, false));
 
         await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
 
@@ -41,14 +34,7 @@ public class SequencePlayerServiceTests : IDisposable
     [Fact]
     public async Task PlayAsync_IntSlot_SendsInt()
     {
-        var slots = Slots(new SequenceSlot
-        {
-            Address = "/input/Jump",
-            Value = 1f,
-            ValueType = OscValueType.Int,
-            DurationMs = 10,
-            ResetOnComplete = false,
-        });
+        var slots = Slots(new IntSlot("/input/Jump", 1, 10, false));
 
         await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
 
@@ -58,14 +44,7 @@ public class SequencePlayerServiceTests : IDisposable
     [Fact]
     public async Task PlayAsync_BoolSlot_SendsBool()
     {
-        var slots = Slots(new SequenceSlot
-        {
-            Address = "/input/Voice",
-            Value = 1f,
-            ValueType = OscValueType.Bool,
-            DurationMs = 10,
-            ResetOnComplete = false,
-        });
+        var slots = Slots(new BoolSlot("/input/Voice", true, 10, false));
 
         await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
 
@@ -75,26 +54,19 @@ public class SequencePlayerServiceTests : IDisposable
     [Fact]
     public async Task PlayAsync_StringSlot_SendsString()
     {
-        var slots = Slots(new SequenceSlot
-        {
-            Address = "/custom/param",
-            StringValue = "hello",
-            ValueType = OscValueType.String,
-            DurationMs = 10,
-            ResetOnComplete = false,
-        });
+        var slots = Slots(new StringSlot("/custom/param", "hello", 10, false));
 
         await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
 
         _sender.Verify(s => s.SendString("/custom/param", "hello"), Times.Once);
     }
 
-    // ─── 待機スロット（Address = null）────────────────────────────────────
+    // ─── 待機スロット ─────────────────────────────────────────────────────
 
     [Fact]
     public async Task PlayAsync_WaitSlot_DoesNotSend()
     {
-        var slots = Slots(new SequenceSlot { Address = null, DurationMs = 10 });
+        var slots = Slots(new WaitSlot(10));
 
         await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
 
@@ -107,14 +79,7 @@ public class SequencePlayerServiceTests : IDisposable
     [Fact]
     public async Task ResetOnComplete_Float_SendsZero()
     {
-        var slots = Slots(new SequenceSlot
-        {
-            Address = "/param/float",
-            Value = 0.8f,
-            ValueType = OscValueType.Float,
-            DurationMs = 10,
-            ResetOnComplete = true,
-        });
+        var slots = Slots(new FloatSlot("/param/float", 0.8f, 10, true));
 
         await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
 
@@ -124,14 +89,7 @@ public class SequencePlayerServiceTests : IDisposable
     [Fact]
     public async Task ResetOnComplete_Int_SendsZero()
     {
-        var slots = Slots(new SequenceSlot
-        {
-            Address = "/param/int",
-            Value = 1f,
-            ValueType = OscValueType.Int,
-            DurationMs = 10,
-            ResetOnComplete = true,
-        });
+        var slots = Slots(new IntSlot("/param/int", 1, 10, true));
 
         await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
 
@@ -141,14 +99,7 @@ public class SequencePlayerServiceTests : IDisposable
     [Fact]
     public async Task ResetOnComplete_Bool_SendsFalse()
     {
-        var slots = Slots(new SequenceSlot
-        {
-            Address = "/param/bool",
-            Value = 1f,
-            ValueType = OscValueType.Bool,
-            DurationMs = 10,
-            ResetOnComplete = true,
-        });
+        var slots = Slots(new BoolSlot("/param/bool", true, 10, true));
 
         await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
 
@@ -158,14 +109,7 @@ public class SequencePlayerServiceTests : IDisposable
     [Fact]
     public async Task ResetOnComplete_String_SendsEmpty()
     {
-        var slots = Slots(new SequenceSlot
-        {
-            Address = "/param/str",
-            StringValue = "hello",
-            ValueType = OscValueType.String,
-            DurationMs = 10,
-            ResetOnComplete = true,
-        });
+        var slots = Slots(new StringSlot("/param/str", "hello", 10, true));
 
         await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
 
@@ -176,10 +120,10 @@ public class SequencePlayerServiceTests : IDisposable
     public async Task ResetOnComplete_False_NeverSendsReset()
     {
         var slots = Slots(
-            new SequenceSlot { Address = "/param/float", Value = 0.8f, ValueType = OscValueType.Float, DurationMs = 10, ResetOnComplete = false },
-            new SequenceSlot { Address = "/param/int", Value = 1f, ValueType = OscValueType.Int, DurationMs = 10, ResetOnComplete = false },
-            new SequenceSlot { Address = "/param/bool", Value = 1f, ValueType = OscValueType.Bool, DurationMs = 10, ResetOnComplete = false },
-            new SequenceSlot { Address = "/param/str", StringValue = "hi", ValueType = OscValueType.String, DurationMs = 10, ResetOnComplete = false }
+            new FloatSlot("/param/float", 0.8f, 10, false),
+            new IntSlot("/param/int",     1,    10, false),
+            new BoolSlot("/param/bool",   true, 10, false),
+            new StringSlot("/param/str",  "hi", 10, false)
         );
 
         await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
@@ -197,9 +141,9 @@ public class SequencePlayerServiceTests : IDisposable
     {
         // [LoopBegin×3] [Jump=1] [LoopEnd]  → Jump を 3 回送信
         var slots = Slots(
-            new SequenceSlot { SlotType = SlotType.LoopBegin, RepeatCount = 3 },
-            new SequenceSlot { Address = "/input/Jump", Value = 1f, ValueType = OscValueType.Int, DurationMs = 5, ResetOnComplete = false },
-            new SequenceSlot { SlotType = SlotType.LoopEnd }
+            new LoopBeginSlot(3),
+            new IntSlot("/input/Jump", 1, 5, false),
+            new LoopEndSlot()
         );
 
         await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
@@ -213,11 +157,11 @@ public class SequencePlayerServiceTests : IDisposable
         // [LoopBegin×2] [LoopBegin×3] [Jump=1] [LoopEnd] [LoopEnd]
         // → Jump は 2×3 = 6 回
         var slots = Slots(
-            new SequenceSlot { SlotType = SlotType.LoopBegin, RepeatCount = 2 },
-            new SequenceSlot { SlotType = SlotType.LoopBegin, RepeatCount = 3 },
-            new SequenceSlot { Address = "/input/Jump", Value = 1f, ValueType = OscValueType.Int, DurationMs = 5, ResetOnComplete = false },
-            new SequenceSlot { SlotType = SlotType.LoopEnd },
-            new SequenceSlot { SlotType = SlotType.LoopEnd }
+            new LoopBeginSlot(2),
+            new LoopBeginSlot(3),
+            new IntSlot("/input/Jump", 1, 5, false),
+            new LoopEndSlot(),
+            new LoopEndSlot()
         );
 
         await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
@@ -231,8 +175,8 @@ public class SequencePlayerServiceTests : IDisposable
     public async Task PlayAsync_ReportsSlotIndexThenMinusOne()
     {
         var slots = Slots(
-            new SequenceSlot { Address = "/input/Jump", Value = 1f, ValueType = OscValueType.Int, DurationMs = 5, ResetOnComplete = false },
-            new SequenceSlot { Address = "/input/Voice", Value = 1f, ValueType = OscValueType.Int, DurationMs = 5, ResetOnComplete = false }
+            new IntSlot("/input/Jump",  1, 5, false),
+            new IntSlot("/input/Voice", 1, 5, false)
         );
         var reported = new List<int>();
         var progress = new Progress<int>(i => reported.Add(i));
@@ -252,14 +196,7 @@ public class SequencePlayerServiceTests : IDisposable
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        var slots = Slots(new SequenceSlot
-        {
-            Address = "/input/Jump",
-            Value = 1f,
-            ValueType = OscValueType.Int,
-            DurationMs = 1000,
-            ResetOnComplete = false,
-        });
+        var slots = Slots(new IntSlot("/input/Jump", 1, 1000, false));
 
         await _sut.PlayAsync(slots, loop: false, null, cts.Token);
 
@@ -269,14 +206,7 @@ public class SequencePlayerServiceTests : IDisposable
     [Fact]
     public async Task StopAsync_DuringPlay_StopsPlayback()
     {
-        var slots = Slots(new SequenceSlot
-        {
-            Address = "/input/Vertical",
-            Value = 1f,
-            ValueType = OscValueType.Float,
-            DurationMs = 5000,   // 長い遅延
-            ResetOnComplete = false,
-        });
+        var slots = Slots(new FloatSlot("/input/Vertical", 1f, 5000, false));
 
         Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
         await Task.Delay(30); // PlayAsync が開始するのを待つ
@@ -289,14 +219,7 @@ public class SequencePlayerServiceTests : IDisposable
     [Fact]
     public async Task StopAsync_ResetOnComplete_False_DoesNotSendReset()
     {
-        var slots = Slots(new SequenceSlot
-        {
-            Address = "/input/Vertical",
-            Value = 1f,
-            ValueType = OscValueType.Float,
-            DurationMs = 5000,
-            ResetOnComplete = false,
-        });
+        var slots = Slots(new FloatSlot("/input/Vertical", 1f, 5000, false));
 
         Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
         await Task.Delay(30);
@@ -309,14 +232,7 @@ public class SequencePlayerServiceTests : IDisposable
     [Fact]
     public async Task StopAsync_ResetOnComplete_True_SendsReset()
     {
-        var slots = Slots(new SequenceSlot
-        {
-            Address = "/input/Vertical",
-            Value = 1f,
-            ValueType = OscValueType.Float,
-            DurationMs = 5000,
-            ResetOnComplete = true,
-        });
+        var slots = Slots(new FloatSlot("/input/Vertical", 1f, 5000, true));
 
         Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
         await Task.Delay(30);
@@ -331,14 +247,7 @@ public class SequencePlayerServiceTests : IDisposable
     [Fact]
     public async Task PauseAsync_ThenResumeAsync_CompletesPlayback()
     {
-        var slots = Slots(new SequenceSlot
-        {
-            Address = "/input/Jump",
-            Value = 1f,
-            ValueType = OscValueType.Int,
-            DurationMs = 50,
-            ResetOnComplete = false,
-        });
+        var slots = Slots(new IntSlot("/input/Jump", 1, 50, false));
 
         Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
         await Task.Delay(10);
@@ -355,14 +264,7 @@ public class SequencePlayerServiceTests : IDisposable
     [Fact]
     public async Task PauseAsync_ResetOnComplete_True_SendsReset()
     {
-        var slots = Slots(new SequenceSlot
-        {
-            Address = "/input/Jump",
-            Value = 1f,
-            ValueType = OscValueType.Int,
-            DurationMs = 5000,
-            ResetOnComplete = true,
-        });
+        var slots = Slots(new IntSlot("/input/Jump", 1, 5000, true));
 
         Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
         await Task.Delay(30);
@@ -376,14 +278,7 @@ public class SequencePlayerServiceTests : IDisposable
     [Fact]
     public async Task PauseAsync_ResetOnComplete_False_DoesNotSendReset()
     {
-        var slots = Slots(new SequenceSlot
-        {
-            Address = "/input/Jump",
-            Value = 1f,
-            ValueType = OscValueType.Int,
-            DurationMs = 5000,
-            ResetOnComplete = false,
-        });
+        var slots = Slots(new IntSlot("/input/Jump", 1, 5000, false));
 
         Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
         await Task.Delay(30);
@@ -397,14 +292,7 @@ public class SequencePlayerServiceTests : IDisposable
     [Fact]
     public async Task ResumeAsync_ResendsSendCommand()
     {
-        var slots = Slots(new SequenceSlot
-        {
-            Address = "/input/Jump",
-            Value = 1f,
-            ValueType = OscValueType.Int,
-            DurationMs = 5000,
-            ResetOnComplete = false,
-        });
+        var slots = Slots(new IntSlot("/input/Jump", 1, 5000, false));
 
         Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
         await Task.Delay(30);
@@ -429,14 +317,7 @@ public class SequencePlayerServiceTests : IDisposable
     [Fact]
     public async Task IsPlaying_AfterPlayCompletes_IsFalse()
     {
-        var slots = Slots(new SequenceSlot
-        {
-            Address = "/input/Jump",
-            Value = 1f,
-            ValueType = OscValueType.Int,
-            DurationMs = 10,
-            ResetOnComplete = false,
-        });
+        var slots = Slots(new IntSlot("/input/Jump", 1, 10, false));
 
         await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
 

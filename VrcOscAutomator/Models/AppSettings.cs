@@ -2,6 +2,8 @@ namespace VrcOscAutomator.Models;
 
 public sealed class AppSettings
 {
+    public int Version { get; init; } = 2;
+
     public List<OscTarget> Targets { get; set; } = [new()];
     public List<Profile> Profiles { get; set; } =
     [

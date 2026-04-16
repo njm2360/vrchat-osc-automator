@@ -46,6 +46,7 @@ public sealed partial class ProfileViewModel : ObservableObject
                 slot.PropertyChanged -= OnSlotPropertyChanged;
 
         OnPropertyChanged(nameof(AllSlotsValid));
+        ExportCommand.NotifyCanExecuteChanged();
     }
 
     private void OnSlotPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -98,12 +99,14 @@ public sealed partial class ProfileViewModel : ObservableObject
         NotifyMoveCommandsCanExecute();
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanExport))]
     private void Export()
     {
         string base64 = _importExport.Export(Slots.Select(s => s.ToModel()));
         _dialogService.ShowExportDialog(base64);
     }
+
+    private bool CanExport() => Slots.Count > 0;
 
     [RelayCommand]
     private void Import()
@@ -116,7 +119,7 @@ public sealed partial class ProfileViewModel : ObservableObject
         {
             slots = _importExport.Import(input);
         }
-        catch (Exception ex) when (ex is FormatException or JsonException)
+        catch (Exception ex) when (ex is JsonException)
         {
             _dialogService.ShowError("インポートデータの形式が正しくありません。");
             return;

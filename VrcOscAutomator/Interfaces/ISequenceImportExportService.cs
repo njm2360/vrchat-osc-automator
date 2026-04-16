@@ -6,5 +6,5 @@ public interface ISequenceImportExportService
 {
     string Export(IEnumerable<SequenceSlot> slots);
 
-    IReadOnlyList<SequenceSlot>? Import(string base64);
+    IReadOnlyList<SequenceSlot>? Import(string input);
 }

@@ -350,12 +350,12 @@ public class ProfileViewModelTests
     public void Export_CallsImportExportServiceAndShowsDialog()
     {
         _sut.AddSlotCommand.Execute(null);
-        _importExport.Setup(s => s.Export(It.IsAny<IEnumerable<SequenceSlot>>())).Returns("base64data");
+        _importExport.Setup(s => s.Export(It.IsAny<IEnumerable<SequenceSlot>>())).Returns("jsondata");
 
         _sut.ExportCommand.Execute(null);
 
         _importExport.Verify(s => s.Export(It.IsAny<IEnumerable<SequenceSlot>>()), Times.Once);
-        _dialog.Verify(d => d.ShowExportDialog("base64data"), Times.Once);
+        _dialog.Verify(d => d.ShowExportDialog("jsondata"), Times.Once);
     }
 
     // ─── Import ───────────────────────────────────────────────────────────
@@ -383,10 +383,10 @@ public class ProfileViewModelTests
     }
 
     [Fact]
-    public void Import_InvalidBase64_ShowsError()
+    public void Import_InvalidJson_ShowsError()
     {
-        _dialog.Setup(d => d.ShowImportDialog()).Returns("!!!invalid!!!");
-        _importExport.Setup(s => s.Import("!!!invalid!!!")).Throws<FormatException>();
+        _dialog.Setup(d => d.ShowImportDialog()).Returns("{ not json }");
+        _importExport.Setup(s => s.Import("{ not json }")).Throws<System.Text.Json.JsonException>();
 
         _sut.ImportCommand.Execute(null);
 
@@ -396,8 +396,8 @@ public class ProfileViewModelTests
     [Fact]
     public void Import_EmptySlotList_ShowsError()
     {
-        _dialog.Setup(d => d.ShowImportDialog()).Returns("validbase64");
-        _importExport.Setup(s => s.Import("validbase64")).Returns([]);
+        _dialog.Setup(d => d.ShowImportDialog()).Returns("validjson");
+        _importExport.Setup(s => s.Import("validjson")).Returns([]);
 
         _sut.ImportCommand.Execute(null);
 
@@ -410,7 +410,7 @@ public class ProfileViewModelTests
         _sut.AddSlotCommand.Execute(null);
         _dialog.Setup(d => d.ShowImportDialog()).Returns("data");
         _importExport.Setup(s => s.Import("data")).Returns(
-            [new SequenceSlot { Address = "/input/Jump", Value = 1f, ValueType = OscValueType.Int }]);
+            [new IntSlot("/input/Jump", 1)]);
         _dialog.Setup(d => d.ConfirmOverwrite()).Returns(false);
 
         _sut.ImportCommand.Execute(null);
@@ -422,10 +422,10 @@ public class ProfileViewModelTests
     public void Import_ExistingSlotsAndOverwriteConfirmed_ReplacesSlots()
     {
         _sut.AddSlotCommand.Execute(null);
-        var importedSlots = new[]
+        var importedSlots = new SequenceSlot[]
         {
-            new SequenceSlot { Address = "/input/Jump",  Value = 1f, ValueType = OscValueType.Int },
-            new SequenceSlot { Address = "/input/Voice", Value = 1f, ValueType = OscValueType.Int },
+            new IntSlot("/input/Jump",  1),
+            new IntSlot("/input/Voice", 1),
         };
         _dialog.Setup(d => d.ShowImportDialog()).Returns("data");
         _importExport.Setup(s => s.Import("data")).Returns(importedSlots);
@@ -439,10 +439,7 @@ public class ProfileViewModelTests
     [Fact]
     public void Import_NoExistingSlots_NoConfirmRequired()
     {
-        var importedSlots = new[]
-        {
-            new SequenceSlot { Address = "/input/Jump", Value = 1f, ValueType = OscValueType.Int },
-        };
+        var importedSlots = new SequenceSlot[] { new IntSlot("/input/Jump", 1) };
         _dialog.Setup(d => d.ShowImportDialog()).Returns("data");
         _importExport.Setup(s => s.Import("data")).Returns(importedSlots);
 
@@ -476,8 +473,8 @@ public class ProfileViewModelTests
             Name = "Loaded",
             Slots =
             [
-                new SequenceSlot { Address = "/input/Jump", Value = 1f, ValueType = OscValueType.Int },
-                new SequenceSlot { Address = null, DurationMs = 500 },
+                new IntSlot("/input/Jump", 1),
+                new WaitSlot(500),
             ],
         };
 
@@ -495,15 +492,15 @@ public class ProfileViewModelTests
             Name = "RT",
             Slots =
             [
-                new SequenceSlot { SlotType = SlotType.LoopBegin, RepeatCount = 3 },
-                new SequenceSlot { Address = "/input/Jump", Value = 1f, ValueType = OscValueType.Int, DurationMs = 200 },
-                new SequenceSlot { SlotType = SlotType.LoopEnd },
+                new LoopBeginSlot(3),
+                new IntSlot("/input/Jump", 1, 200),
+                new LoopEndSlot(),
             ],
         };
 
         _sut.LoadFromModel(profile);
         Profile restored = _sut.ToModel();
 
-        restored.Should().BeEquivalentTo(profile);
+        restored.Should().BeEquivalentTo(profile, o => o.RespectingRuntimeTypes());
     }
 }

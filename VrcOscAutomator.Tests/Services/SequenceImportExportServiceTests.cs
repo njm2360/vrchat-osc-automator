@@ -1,4 +1,3 @@
-using System.Text;
 using System.Text.Json;
 using FluentAssertions;
 using VrcOscAutomator.Models;
@@ -14,43 +13,35 @@ public class SequenceImportExportServiceTests
     // ─── Export ────────────────────────────────────────────────────────────
 
     [Fact]
-    public void Export_ReturnsValidBase64()
+    public void Export_ReturnsValidJson()
     {
-        var slots = new[] { new SequenceSlot { Address = "/test", Value = 0.5f } };
+        var slots = new SequenceSlot[] { new FloatSlot("/test", 0.5f) };
 
         string result = _sut.Export(slots);
 
-        Convert.TryFromBase64String(result, new byte[result.Length], out _).Should().BeTrue();
+        // valid JSON かどうかは例外なしでパースできることで確認
+        Action act = () => JsonDocument.Parse(result);
+        act.Should().NotThrow();
     }
 
     [Fact]
-    public void Export_EmptyList_ReturnsBase64EncodedEmptyArray()
+    public void Export_EmptyList_ReturnsEmptyJsonArray()
     {
         string result = _sut.Export([]);
 
-        string json = Encoding.UTF8.GetString(Convert.FromBase64String(result));
-        json.Should().Be("[]");
+        using var doc = JsonDocument.Parse(result);
+        doc.RootElement.GetArrayLength().Should().Be(0);
     }
 
     [Fact]
-    public void Export_PreservesAllFields()
+    public void Export_IncludesTypeDiscriminator()
     {
-        var slot = new SequenceSlot
-        {
-            Address = "/input/Vertical",
-            Value = 1.0f,
-            StringValue = "hello",
-            ValueType = OscValueType.Float,
-            DurationMs = 300,
-            ResetOnComplete = false,
-            SlotType = SlotType.Normal,
-            RepeatCount = 3,
-        };
+        var slots = new SequenceSlot[] { new FloatSlot("/input/Vertical", 1.0f, 300, false) };
 
-        string base64 = _sut.Export([slot]);
-        IReadOnlyList<SequenceSlot>? imported = _sut.Import(base64);
+        string json = _sut.Export(slots);
 
-        imported.Should().ContainSingle().Which.Should().BeEquivalentTo(slot);
+        using var doc = JsonDocument.Parse(json);
+        doc.RootElement[0].GetProperty("Type").GetString().Should().Be("float");
     }
 
     // ─── Import ────────────────────────────────────────────────────────────
@@ -58,49 +49,42 @@ public class SequenceImportExportServiceTests
     [Fact]
     public void Import_RoundTrip_ReturnsIdenticalSlots()
     {
-        var slots = new[]
+        var slots = new SequenceSlot[]
         {
-            new SequenceSlot { Address = "/input/Jump",    Value = 1f,  ValueType = OscValueType.Int },
-            new SequenceSlot { Address = "/input/Voice",   Value = 0f,  ValueType = OscValueType.Int },
-            new SequenceSlot { Address = null,             DurationMs = 1000 }, // 待機
+            new IntSlot("/input/Jump",  1,    50, false),
+            new IntSlot("/input/Voice", 0,    50, false),
+            new WaitSlot(1000),
         };
 
-        string base64 = _sut.Export(slots);
-        IReadOnlyList<SequenceSlot>? result = _sut.Import(base64);
+        string json = _sut.Export(slots);
+        IReadOnlyList<SequenceSlot>? result = _sut.Import(json);
 
-        result.Should().BeEquivalentTo(slots);
+        result.Should().BeEquivalentTo(slots, o => o.RespectingRuntimeTypes());
     }
 
     [Fact]
     public void Import_LoopMarkers_RoundTrip()
     {
-        var slots = new[]
+        var slots = new SequenceSlot[]
         {
-            new SequenceSlot { SlotType = SlotType.LoopBegin, RepeatCount = 5 },
-            new SequenceSlot { Address = "/input/Jump", Value = 1f, ValueType = OscValueType.Int },
-            new SequenceSlot { SlotType = SlotType.LoopEnd },
+            new LoopBeginSlot(5),
+            new IntSlot("/input/Jump", 1, 50, false),
+            new LoopEndSlot(),
         };
 
-        string base64 = _sut.Export(slots);
-        IReadOnlyList<SequenceSlot>? result = _sut.Import(base64);
+        string json = _sut.Export(slots);
+        IReadOnlyList<SequenceSlot>? result = _sut.Import(json);
 
-        result.Should().BeEquivalentTo(slots);
+        result.Should().NotBeNull().And.HaveCount(3);
+        result![0].Should().Be(new LoopBeginSlot(5));
+        result[1].Should().Be(new IntSlot("/input/Jump", 1, 50, false));
+        result[2].Should().BeOfType<LoopEndSlot>();
     }
 
     [Fact]
-    public void Import_InvalidBase64_ThrowsFormatException()
+    public void Import_InvalidJson_ThrowsJsonException()
     {
-        Action act = () => _sut.Import("not-valid-base64!!!");
-
-        act.Should().Throw<FormatException>();
-    }
-
-    [Fact]
-    public void Import_ValidBase64ButInvalidJson_ThrowsJsonException()
-    {
-        string badJson = Convert.ToBase64String(Encoding.UTF8.GetBytes("{ not json }"));
-
-        Action act = () => _sut.Import(badJson);
+        Action act = () => _sut.Import("{ not json }");
 
         act.Should().Throw<JsonException>();
     }
@@ -108,9 +92,7 @@ public class SequenceImportExportServiceTests
     [Fact]
     public void Import_EmptyJsonArray_ReturnsEmptyList()
     {
-        string base64 = Convert.ToBase64String(Encoding.UTF8.GetBytes("[]"));
-
-        IReadOnlyList<SequenceSlot>? result = _sut.Import(base64);
+        IReadOnlyList<SequenceSlot>? result = _sut.Import("[]");
 
         result.Should().NotBeNull().And.BeEmpty();
     }
@@ -118,17 +100,17 @@ public class SequenceImportExportServiceTests
     [Fact]
     public void Import_AllValueTypes_Preserved()
     {
-        var slots = new[]
+        var slots = new SequenceSlot[]
         {
-            new SequenceSlot { Address = "/a", Value = 0.5f,  ValueType = OscValueType.Float },
-            new SequenceSlot { Address = "/b", Value = 1f,    ValueType = OscValueType.Int },
-            new SequenceSlot { Address = "/c", Value = 1f,    ValueType = OscValueType.Bool },
-            new SequenceSlot { Address = "/d", StringValue = "str", ValueType = OscValueType.String },
+            new FloatSlot("/a", 0.5f,   50, false),
+            new IntSlot("/b",   1,      50, false),
+            new BoolSlot("/c",  true,   50, false),
+            new StringSlot("/d","str",  50, false),
         };
 
-        string base64 = _sut.Export(slots);
-        IReadOnlyList<SequenceSlot>? result = _sut.Import(base64);
+        string json = _sut.Export(slots);
+        IReadOnlyList<SequenceSlot>? result = _sut.Import(json);
 
-        result.Should().BeEquivalentTo(slots);
+        result.Should().BeEquivalentTo(slots, o => o.RespectingRuntimeTypes());
     }
 }

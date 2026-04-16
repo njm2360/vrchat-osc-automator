@@ -9,7 +9,7 @@ public sealed record SlotPreset(string Name, string? Address, OscValueType Value
     internal const string LoopEndSentinel = "__LOOP_END__";
 
     /// <summary>既知のアドレスを持つ定義済みプリセット（待機・ループ・カスタム以外）。</summary>
-    public bool IsBuiltinPreset => Address is { Length: > 0 } && !IsLoopBegin && !IsLoopEnd;
+    public bool IsBuiltinPreset => Address is { Length: > 0 } && !IsLoopMarker;
 
     /// <summary>Float 型の定義済みプリセット。</summary>
     public bool IsBuiltinFloat => IsBuiltinPreset && ValueType == OscValueType.Float;
@@ -28,6 +28,9 @@ public sealed record SlotPreset(string Name, string? Address, OscValueType Value
 
     /// <summary>繰り返しブロックの終了マーカー。</summary>
     public bool IsLoopEnd => Address == LoopEndSentinel;
+
+    /// <summary>繰り返し開始・終了いずれかのマーカー。</summary>
+    public bool IsLoopMarker => IsLoopBegin || IsLoopEnd;
 
     // ─── 定義済みプリセット一覧 ───────────────────────────────────────
     public static readonly IReadOnlyList<SlotPreset> All =

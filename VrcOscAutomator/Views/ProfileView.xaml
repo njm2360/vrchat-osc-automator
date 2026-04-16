@@ -103,9 +103,10 @@
                                     <TextBlock Grid.Column="0" Text="値:"
                                                VerticalAlignment="Center" Foreground="#444" />
                                     <TextBox Grid.Column="1"
-                                             Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                             Text="{Binding Value, UpdateSourceTrigger=LostFocus}"
                                              VerticalAlignment="Center"
-                                             b:NumericTextBoxBehavior.RefreshOnLostFocus="True" />
+                                             b:NumericTextBoxBehavior.RefreshOnLostFocus="True"
+                                             b:NumericTextBoxBehavior.AllowDecimal="True" />
                                 </Grid>
 
                                 <!-- 行2b: Int モード — 数値入力 -->
@@ -225,17 +226,11 @@
                 <DataGridTemplateColumn Header="コマンド" Width="120" SortMemberPath="SelectedPreset.Name">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate DataType="{x:Type vm:SequenceSlotViewModel}">
-                            <TextBlock Text="{Binding SelectedPreset.Name}"
-                                       VerticalAlignment="Center" Margin="4,0" />
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                    <DataGridTemplateColumn.CellEditingTemplate>
-                        <DataTemplate DataType="{x:Type vm:SequenceSlotViewModel}">
                             <ComboBox ItemsSource="{Binding AvailablePresets}"
                                       SelectedItem="{Binding SelectedPreset, UpdateSourceTrigger=PropertyChanged}"
                                       DisplayMemberPath="Name" />
                         </DataTemplate>
-                    </DataGridTemplateColumn.CellEditingTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
 
                 <!-- 時間 (ms) — ループマーカーには非表示 -->

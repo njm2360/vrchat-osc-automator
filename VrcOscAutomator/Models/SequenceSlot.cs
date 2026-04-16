@@ -1,25 +1,56 @@
+using System.Text.Json.Serialization;
+
 namespace VrcOscAutomator.Models;
 
-public sealed record SequenceSlot
-{
-    /// <summary>OSC アドレス。null = 待機（送信なし）。</summary>
-    public string? Address { get; init; }
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
+[JsonDerivedType(typeof(FloatSlot), "float")]
+[JsonDerivedType(typeof(IntSlot), "int")]
+[JsonDerivedType(typeof(BoolSlot), "bool")]
+[JsonDerivedType(typeof(StringSlot), "string")]
+[JsonDerivedType(typeof(WaitSlot), "wait")]
+[JsonDerivedType(typeof(LoopBeginSlot), "loop_begin")]
+[JsonDerivedType(typeof(LoopEndSlot), "loop_end")]
+public abstract record SequenceSlot;
 
-    /// <summary>送信する値。Float: -1.0〜+1.0、Int: 0/1、Bool: 0(false)/1(true)。</summary>
-    public float Value { get; init; }
+/// <summary>OSC を送信する基底スロット。</summary>
+public abstract record OscSlot(
+    string Address,
+    int DurationMs,
+    bool ResetOnComplete) : SequenceSlot;
 
-    /// <summary>String型のときに送信する文字列。</summary>
-    public string StringValue { get; init; } = string.Empty;
+/// <summary>Float 値を送信するスロット（-1.0〜+1.0）。</summary>
+public record FloatSlot(
+    string Address,
+    float Value,
+    int DurationMs = 500,
+    bool ResetOnComplete = true) : OscSlot(Address, DurationMs, ResetOnComplete);
 
-    /// <summary>送信する値の型。</summary>
-    public OscValueType ValueType { get; init; } = OscValueType.Float;
+/// <summary>Int 値を送信するスロット（0 / 1）。</summary>
+public record IntSlot(
+    string Address,
+    int Value,
+    int DurationMs = 500,
+    bool ResetOnComplete = true) : OscSlot(Address, DurationMs, ResetOnComplete);
 
-    public int DurationMs { get; init; } = 500;
-    public bool ResetOnComplete { get; init; } = true;
+/// <summary>Bool 値を送信するスロット。</summary>
+public record BoolSlot(
+    string Address,
+    bool Value,
+    int DurationMs = 500,
+    bool ResetOnComplete = true) : OscSlot(Address, DurationMs, ResetOnComplete);
 
-    /// <summary>スロットの種別。Normal 以外はループマーカーとして扱われる。</summary>
-    public SlotType SlotType { get; init; } = SlotType.Normal;
+/// <summary>String 値を送信するスロット。</summary>
+public record StringSlot(
+    string Address,
+    string Value,
+    int DurationMs = 500,
+    bool ResetOnComplete = true) : OscSlot(Address, DurationMs, ResetOnComplete);
 
-    /// <summary>繰り返し回数。SlotType == LoopBegin のときのみ有効。</summary>
-    public int RepeatCount { get; init; } = 2;
-}
+/// <summary>OSC を送信せず待機するスロット。</summary>
+public record WaitSlot(int DurationMs = 500) : SequenceSlot;
+
+/// <summary>繰り返しブロックの開始マーカー。</summary>
+public record LoopBeginSlot(int RepeatCount = 2) : SequenceSlot;
+
+/// <summary>繰り返しブロックの終了マーカー。</summary>
+public record LoopEndSlot() : SequenceSlot;

@@ -7,7 +7,8 @@ namespace VrcOscAutomator.Behaviors;
 /// <summary>
 /// 数値バインディング TextBox 向けのビヘイビア。
 /// ・RefreshOnLostFocus: フォーカスが外れた際に表示をソース値から再描画する。
-/// ・MinValue: フォーカスが外れた際に最小値未満の入力をクランプしてソースに書き戻す。
+/// ・AllowDecimal: true のとき小数入力を許可する（デフォルト false = 整数扱い）。
+/// ・MinValue / MaxValue: フォーカスが外れた際に範囲外の入力をクランプしてソースに書き戻す。
 /// </summary>
 public static class NumericTextBoxBehavior
 {
@@ -27,6 +28,20 @@ public static class NumericTextBoxBehavior
 
     public static void SetRefreshOnLostFocus(TextBox element, bool value) =>
         element.SetValue(RefreshOnLostFocusProperty, value);
+
+    // ── AllowDecimal ────────────────────────────────────────────────────
+    public static readonly DependencyProperty AllowDecimalProperty =
+        DependencyProperty.RegisterAttached(
+            "AllowDecimal",
+            typeof(bool),
+            typeof(NumericTextBoxBehavior),
+            new PropertyMetadata(false));
+
+    public static bool GetAllowDecimal(TextBox element) =>
+        (bool)element.GetValue(AllowDecimalProperty);
+
+    public static void SetAllowDecimal(TextBox element, bool value) =>
+        element.SetValue(AllowDecimalProperty, value);
 
     // ── MinValue ────────────────────────────────────────────────────────
     public static readonly DependencyProperty MinValueProperty =
@@ -72,23 +87,33 @@ public static class NumericTextBoxBehavior
         var expr = BindingOperations.GetBindingExpression(tb, TextBox.TextProperty);
         if (expr == null) return;
 
-        int min = GetMinValue(tb);
-        int max = GetMaxValue(tb);
-        if (int.TryParse(tb.Text, out int parsed))
+        if (GetAllowDecimal(tb))
         {
-            int clamped = Math.Clamp(parsed, min == NoMinValue ? int.MinValue : min,
-                                             max == NoMaxValue ? int.MaxValue : max);
-            if (clamped != parsed)
-                tb.Text = clamped.ToString();
-            // 正常値・クランプ後どちらも UpdateSource でソースに確定させる
-            // (LostFocus バインディングではビヘイビアがコミットより先に動くため
-            //  UpdateTarget を使うと未コミットの旧値に戻ってしまう)
+            // 小数モード: テキストをコミットしてソースから再描画（"0." → "0" の正規化）。
+            // 変換不能な文字列は UpdateSource が無視され、UpdateTarget で旧値に戻る。
             expr.UpdateSource();
+            expr.UpdateTarget();
         }
         else
         {
-            // 空文字など変換不能 → ソースから旧値を復元して表示を確定させる
-            expr.UpdateTarget();
+            int min = GetMinValue(tb);
+            int max = GetMaxValue(tb);
+            if (int.TryParse(tb.Text, out int parsed))
+            {
+                int clamped = Math.Clamp(parsed, min == NoMinValue ? int.MinValue : min,
+                                                 max == NoMaxValue ? int.MaxValue : max);
+                if (clamped != parsed)
+                    tb.Text = clamped.ToString();
+                // 正常値・クランプ後どちらも UpdateSource でソースに確定させる
+                // (LostFocus バインディングではビヘイビアがコミットより先に動くため
+                //  UpdateTarget を使うと未コミットの旧値に戻ってしまう)
+                expr.UpdateSource();
+            }
+            else
+            {
+                // 空文字など変換不能 → ソースから旧値を復元して表示を確定させる
+                expr.UpdateTarget();
+            }
         }
     }
 }
