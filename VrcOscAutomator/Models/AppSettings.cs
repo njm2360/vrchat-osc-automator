@@ -14,5 +14,6 @@ public sealed class AppSettings
         new() { Name = "Profile 5" },
     ];
     public HotkeySettings Hotkeys { get; set; } = new();
+    public KeyRepeatSettings KeyRepeat { get; set; } = new();
     public bool IsLoopMode { get; set; } = false;
 }

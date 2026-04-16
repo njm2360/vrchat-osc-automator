@@ -192,7 +192,7 @@
                                                  VerticalAlignment="Center" />
                                 </StackPanel>
                                 <!-- キー選択 -->
-                                <StackPanel Orientation="Horizontal">
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                                     <TextBlock Text="キー:" Width="96"
                                                VerticalAlignment="Center" Foreground="#444" />
                                     <ComboBox ItemsSource="{Binding AvailableKeys}"

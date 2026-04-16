@@ -20,6 +20,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly IGlobalHotkeyService _hotkeyService;
     private List<OscTarget> _targets = [];
     private HotkeySettings _hotkeys = new();
+    private KeyRepeatSettings _keyRepeat = new();
 
     private CancellationTokenSource? _cts;
 
@@ -140,6 +141,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _targets = settings.Targets;
         _oscSender.SetTargets(_targets);
         _hotkeys = settings.Hotkeys;
+        _keyRepeat = settings.KeyRepeat;
+        _player.SetKeyRepeatSettings(_keyRepeat);
         IsLoopMode = settings.IsLoopMode;
 
         for (int i = 0; i < Profiles.Count && i < settings.Profiles.Count; i++)
@@ -171,6 +174,18 @@ public sealed partial class MainWindowViewModel : ObservableObject
         {
             _hotkeys = result;
             _hotkeyService.UpdateSettings(_hotkeys);
+            await SaveAsync();
+        }
+    }
+
+    [RelayCommand]
+    private async Task OpenKeyRepeatSettingsAsync()
+    {
+        KeyRepeatSettings? result = _dialogService.ShowKeyRepeatSettingsWindow(_keyRepeat);
+        if (result is not null)
+        {
+            _keyRepeat = result;
+            _player.SetKeyRepeatSettings(_keyRepeat);
             await SaveAsync();
         }
     }
@@ -223,6 +238,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private static void Close() => Application.Current.MainWindow?.Close();
+
+    [RelayCommand]
     private async Task ClosingAsync() => await SaveAsync();
 
     private async Task SaveAsync()
@@ -232,6 +250,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             Targets = _targets,
             Profiles = [.. Profiles.Select(p => p.ToModel())],
             Hotkeys = _hotkeys,
+            KeyRepeat = _keyRepeat,
             IsLoopMode = IsLoopMode,
         };
         await _repository.SaveAsync(settings);

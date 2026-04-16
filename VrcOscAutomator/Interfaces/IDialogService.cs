@@ -15,4 +15,6 @@ public interface IDialogService
     IReadOnlyList<OscTarget>? ShowSendTargetsWindow(IEnumerable<OscTarget> currentTargets);
 
     HotkeySettings? ShowHotkeySettingsWindow(HotkeySettings currentSettings);
+
+    KeyRepeatSettings? ShowKeyRepeatSettingsWindow(KeyRepeatSettings currentSettings);
 }

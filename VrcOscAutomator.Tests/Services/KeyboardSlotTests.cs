@@ -189,6 +189,31 @@ public class KeyboardSlotTests : IDisposable
         _keyboard.Verify(k => k.SendKey(0x0D, KeyAction.Press), Times.Exactly(3));
     }
 
+    // ─── キーリピート ─────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task PlayAsync_KeySingleSlot_Press_WithDuration_SendsKeyDownMultipleTimes()
+    {
+        // Press + 十分な DurationMs → バックグラウンドリピートで KEYDOWN が複数回送信されること
+        var slots = Slots(new KeySingleSlot(0x41, KeyAction.Press, DurationMs: 200));
+
+        await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
+
+        // 200ms / 33ms ≒ 6 回以上の KEYDOWN が期待される
+        _keyboard.Verify(k => k.SendKey(0x41, KeyAction.Press), Times.AtLeast(3));
+    }
+
+    [Fact]
+    public async Task PlayAsync_KeySingleSlot_Press_ZeroDuration_SendsKeyDownOnce()
+    {
+        // DurationMs=0 のとき、リピートが発火する前にシーケンスが終わるので初回の1回のみ
+        var slots = Slots(new KeySingleSlot(0x41, KeyAction.Press, DurationMs: 0));
+
+        await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
+
+        _keyboard.Verify(k => k.SendKey(0x41, KeyAction.Press), Times.Once);
+    }
+
     // ─── 暴走防止: 停止・一時停止でキー解放 ──────────────────────────────
 
     [Fact]
@@ -202,11 +227,13 @@ public class KeyboardSlotTests : IDisposable
         );
 
         Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
-        await Task.Delay(30);
+        await Task.Delay(5); // リピート間隔(33ms)より十分短い時間で止める
         await _sut.StopAsync();
         await play;
 
-        _keyboard.Verify(k => k.SendKey(0x41, KeyAction.Press), Times.Once);
+        // Stop 前にリピートが発火しないことを保証するためではなく
+        // Release が必ず送信されることを確認する
+        _keyboard.Verify(k => k.SendKey(0x41, KeyAction.Press), Times.AtLeastOnce);
         _keyboard.Verify(k => k.SendKey(0x41, KeyAction.Release), Times.AtLeastOnce);
     }
 
@@ -306,6 +333,67 @@ public class KeyboardSlotTests : IDisposable
 
         _keyboard.Verify(k => k.SendKey(0x41, KeyAction.Press), Times.Once);
         _keyboard.Verify(k => k.SendKey(0x41, KeyAction.Release), Times.Once);
+    }
+
+    // ─── SetKeyRepeatSettings ─────────────────────────────────────────────
+
+    [Fact]
+    public async Task SetKeyRepeatSettings_Disabled_Press_NeverRepeats()
+    {
+        _sut.SetKeyRepeatSettings(new KeyRepeatSettings { IsEnabled = false });
+        var slots = Slots(new KeySingleSlot(0x41, KeyAction.Press, DurationMs: 200));
+
+        await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
+
+        // リピート無効 → 初回の1回のみ
+        _keyboard.Verify(k => k.SendKey(0x41, KeyAction.Press), Times.Once);
+    }
+
+    [Fact]
+    public async Task SetKeyRepeatSettings_InitialDelayLongerThanDuration_NeverRepeats()
+    {
+        // 初回遅延がスロット継続時間より長い → リピートが発火する前にスロットが終わる
+        _sut.SetKeyRepeatSettings(new KeyRepeatSettings { IsEnabled = true, InitialDelayMs = 500, IntervalMs = 33 });
+        var slots = Slots(new KeySingleSlot(0x41, KeyAction.Press, DurationMs: 50));
+
+        await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
+
+        _keyboard.Verify(k => k.SendKey(0x41, KeyAction.Press), Times.Once);
+    }
+
+    [Fact]
+    public async Task SetKeyRepeatSettings_SlowInterval_FewerRepeatsThanDefault()
+    {
+        // 低速インターバル(100ms) vs デフォルト(33ms) で同じ時間内のリピート回数が少ないこと
+        var slotsDefault = Slots(new KeySingleSlot(0x41, KeyAction.Press, DurationMs: 300));
+        var slotsSlow = Slots(new KeySingleSlot(0x41, KeyAction.Press, DurationMs: 300));
+
+        // デフォルト設定で実行
+        int defaultCount = 0;
+        _keyboard.Setup(k => k.SendKey(0x41, KeyAction.Press)).Callback(() => defaultCount++);
+        await _sut.PlayAsync(slotsDefault, loop: false, null, CancellationToken.None);
+        _keyboard.Invocations.Clear();
+
+        // 低速インターバルに変更して再実行
+        _sut.SetKeyRepeatSettings(new KeyRepeatSettings { IsEnabled = true, InitialDelayMs = 0, IntervalMs = 100 });
+        int slowCount = 0;
+        _keyboard.Setup(k => k.SendKey(0x41, KeyAction.Press)).Callback(() => slowCount++);
+        await _sut.PlayAsync(slotsSlow, loop: false, null, CancellationToken.None);
+
+        slowCount.Should().BeLessThan(defaultCount);
+    }
+
+    [Fact]
+    public async Task SetKeyRepeatSettings_ReEnable_RepeatsAgain()
+    {
+        // 一度無効にして再度有効にすると再びリピートすること
+        _sut.SetKeyRepeatSettings(new KeyRepeatSettings { IsEnabled = false });
+        _sut.SetKeyRepeatSettings(new KeyRepeatSettings { IsEnabled = true, InitialDelayMs = 0, IntervalMs = 33 });
+
+        var slots = Slots(new KeySingleSlot(0x41, KeyAction.Press, DurationMs: 200));
+        await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
+
+        _keyboard.Verify(k => k.SendKey(0x41, KeyAction.Press), Times.AtLeast(3));
     }
 
     // ─── ヘルパー ─────────────────────────────────────────────────────────

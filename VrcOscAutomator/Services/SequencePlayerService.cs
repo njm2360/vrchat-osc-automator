@@ -20,6 +20,8 @@ public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender 
 
     private readonly HashSet<int> _pressedKeys = [];
     private readonly HashSet<MouseButton> _pressedMouseButtons = [];
+    private readonly Dictionary<int, CancellationTokenSource> _repeatTasks = [];
+    private KeyRepeatSettings _keyRepeatSettings = new();
 
     public bool IsPlaying => !_playTask.IsCompleted;
     public bool IsPaused { get; private set; }
@@ -128,16 +130,23 @@ public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender 
                     switch (slot)
                     {
                         case KeySingleSlot ks:
-                            var ksSendAction = ks.Action == KeyAction.PressAndRelease ? KeyAction.Press : ks.Action;
-                            keyboardSender.SendKey(ks.VirtualKey, ksSendAction);
-                            if (ks.Action is KeyAction.Press or KeyAction.PressAndRelease)
+                            switch (ks.Action)
                             {
-                                _pressedKeys.Add(ks.VirtualKey);
-                                if (ks.Action == KeyAction.PressAndRelease) _pendingKeyRelease = ks;
-                            }
-                            else
-                            {
-                                _pressedKeys.Remove(ks.VirtualKey);
+                                case KeyAction.Press:
+                                    keyboardSender.SendKey(ks.VirtualKey, KeyAction.Press);
+                                    _pressedKeys.Add(ks.VirtualKey);
+                                    StartKeyRepeat(ks.VirtualKey, stopCt);
+                                    break;
+                                case KeyAction.Release:
+                                    StopKeyRepeat(ks.VirtualKey);
+                                    keyboardSender.SendKey(ks.VirtualKey, KeyAction.Release);
+                                    _pressedKeys.Remove(ks.VirtualKey);
+                                    break;
+                                case KeyAction.PressAndRelease:
+                                    keyboardSender.SendKey(ks.VirtualKey, KeyAction.Press);
+                                    _pressedKeys.Add(ks.VirtualKey);
+                                    _pendingKeyRelease = ks;
+                                    break;
                             }
                             break;
                         case KeyTypeStringSlot kts:
@@ -322,6 +331,55 @@ public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender 
         }
     }
 
+    private void StartKeyRepeat(int virtualKey, CancellationToken stopCt)
+    {
+        StopKeyRepeat(virtualKey); // 二重登録防止
+        var cts = CancellationTokenSource.CreateLinkedTokenSource(stopCt);
+        _repeatTasks[virtualKey] = cts;
+        _ = RunRepeatLoopAsync(virtualKey, cts.Token);
+    }
+
+    public void SetKeyRepeatSettings(KeyRepeatSettings settings) => _keyRepeatSettings = settings;
+
+    private async Task RunRepeatLoopAsync(int virtualKey, CancellationToken ct)
+    {
+        try
+        {
+            if (!_keyRepeatSettings.IsEnabled) return;
+
+            if (_keyRepeatSettings.InitialDelayMs > 0)
+                await Task.Delay(_keyRepeatSettings.InitialDelayMs, ct);
+
+            int intervalMs = Math.Max(1, _keyRepeatSettings.IntervalMs);
+            while (!ct.IsCancellationRequested)
+            {
+                await Task.Delay(intervalMs, ct);
+                if (!IsPaused && _pressedKeys.Contains(virtualKey))
+                    keyboardSender.SendKey(virtualKey, KeyAction.Press);
+            }
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    private void StopKeyRepeat(int virtualKey)
+    {
+        if (_repeatTasks.Remove(virtualKey, out var cts))
+        {
+            cts.Cancel();
+            cts.Dispose();
+        }
+    }
+
+    private void StopAllKeyRepeats()
+    {
+        foreach (var cts in _repeatTasks.Values)
+        {
+            cts.Cancel();
+            cts.Dispose();
+        }
+        _repeatTasks.Clear();
+    }
+
     private void ReleaseAllInputs()
     {
         foreach (int vk in _pressedKeys)
@@ -340,6 +398,7 @@ public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender 
 
     private void ClearInputState()
     {
+        StopAllKeyRepeats();
         ReleaseAllInputs();
         _pressedKeys.Clear();
         _pressedMouseButtons.Clear();

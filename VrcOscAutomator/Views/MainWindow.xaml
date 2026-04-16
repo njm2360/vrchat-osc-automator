@@ -4,10 +4,46 @@
 xmlns:vm="clr-namespace:VrcOscAutomator.ViewModels"
         xmlns:views="clr-namespace:VrcOscAutomator.Views"
         Title="{Binding WindowTitle}"
-        Height="460" Width="660"
+        Height="400" Width="600"
         ResizeMode="NoResize">
 
 <DockPanel>
+
+        <!-- ===== 上部: メニューバー ===== -->
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="ファイル(_F)">
+                <MenuItem Header="終了(_X)" Command="{Binding CloseCommand}" />
+            </MenuItem>
+            <MenuItem Header="操作(_O)">
+                <MenuItem Header="開始(_S)"
+                          Command="{Binding StartCommand}" />
+                <MenuItem Command="{Binding PauseResumeCommand}">
+                    <MenuItem.Style>
+                        <Style TargetType="MenuItem">
+                            <Setter Property="Header" Value="一時停止(_P)" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsPaused}" Value="True">
+                                    <Setter Property="Header" Value="再開(_P)" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </MenuItem.Style>
+                </MenuItem>
+                <MenuItem Header="停止(_T)"
+                          Command="{Binding StopCommand}" />
+            </MenuItem>
+            <MenuItem Header="オプション(_N)">
+                <MenuItem Header="送信先設定(_D)..."
+                          Command="{Binding OpenTargetsWindowCommand}"
+                          IsEnabled="{Binding IsNotPlaying}" />
+                <MenuItem Header="ホットキー設定(_H)..."
+                          Command="{Binding OpenHotkeySettingsCommand}"
+                          IsEnabled="{Binding IsNotPlaying}" />
+                <MenuItem Header="キーリピート設定(_R)..."
+                          Command="{Binding OpenKeyRepeatSettingsCommand}"
+                          IsEnabled="{Binding IsNotPlaying}" />
+            </MenuItem>
+        </Menu>
 
         <!-- ===== 最下部: ステータスバー ===== -->
         <StatusBar DockPanel.Dock="Bottom">
@@ -21,26 +57,13 @@ xmlns:vm="clr-namespace:VrcOscAutomator.ViewModels"
                 BorderBrush="#DDDDDD" BorderThickness="0,1,0,0"
                 Padding="8,6">
             <DockPanel>
-                <!-- ループ切替 -->
                 <CheckBox DockPanel.Dock="Left"
                           Content="ループ再生"
                           IsChecked="{Binding IsLoopMode}"
                           IsEnabled="{Binding IsNotPlaying}"
                           VerticalAlignment="Center"
                           Margin="0,0,16,0" />
-
-                <!-- ボタン群 -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                    <Button Content="送信先設定..."
-                            Command="{Binding OpenTargetsWindowCommand}"
-                            IsEnabled="{Binding IsNotPlaying}"
-                            Width="100" Margin="4,0" />
-                    <Button Content="ホットキー設定..."
-                            Command="{Binding OpenHotkeySettingsCommand}"
-                            IsEnabled="{Binding IsNotPlaying}"
-                            Width="110" Margin="4,0" />
-                    <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}"
-                               Margin="4,4" />
                     <Button Content="開始"
                             Command="{Binding StartCommand}"
                             Width="90" Margin="4,0" />

@@ -1,0 +1,66 @@
+<Window x:Class="VrcOscAutomator.Views.KeyRepeatSettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:VrcOscAutomator.ViewModels"
+        Title="キーリピート設定"
+        Width="420" SizeToContent="Height"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner">
+
+    <Window.Resources>
+        <Style TargetType="TextBlock" x:Key="Label">
+            <Setter Property="Width" Value="120" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="#444" />
+        </Style>
+        <Style TargetType="TextBlock" x:Key="Value">
+            <Setter Property="Width" Value="140" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+    </Window.Resources>
+
+    <StackPanel Margin="20,16,20,12">
+
+        <!-- 有効 / 無効 -->
+        <CheckBox Content="キーリピートを有効にする"
+                  IsChecked="{Binding IsEnabled, UpdateSourceTrigger=PropertyChanged}"
+                  FontSize="13"
+                  Margin="0,0,0,16" />
+
+        <StackPanel IsEnabled="{Binding SliderEnabled}">
+
+            <!-- 待機時間 -->
+            <TextBlock Text="待機時間" FontWeight="SemiBold" Margin="0,0,0,4" />
+            <DockPanel Margin="0,0,0,4">
+                <TextBlock Text="待機時間:" Style="{StaticResource Label}" />
+                <TextBlock Text="{Binding InitialDelaySummary}" Style="{StaticResource Value}" />
+            </DockPanel>
+            <Slider Minimum="0" Maximum="1000"
+                    Value="{Binding InitialDelayMs, UpdateSourceTrigger=PropertyChanged}"
+                    TickFrequency="100" IsSnapToTickEnabled="True"
+                    Margin="0,0,0,16" />
+
+            <!-- リピート間隔 -->
+            <TextBlock Text="リピート間隔" FontWeight="SemiBold" Margin="0,0,0,4" />
+            <DockPanel Margin="0,0,0,4">
+                <TextBlock Text="速度:" Style="{StaticResource Label}" />
+                <TextBlock Text="{Binding IntervalSummary}" Style="{StaticResource Value}" />
+            </DockPanel>
+            <Slider Minimum="1" Maximum="50"
+                    Value="{Binding IntervalRatePerSecond, UpdateSourceTrigger=PropertyChanged}"
+                    TickFrequency="1" IsSnapToTickEnabled="True"
+                    Margin="0,0,0,16" />
+
+        </StackPanel>
+
+        <!-- OK / キャンセル -->
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,4,0,0">
+            <Button Content="OK" Width="80" Margin="0,0,8,0"
+                    IsDefault="True" Click="OkButton_Click" />
+            <Button Content="キャンセル" Width="80"
+                    IsCancel="True" Click="CancelButton_Click" />
+        </StackPanel>
+
+    </StackPanel>
+</Window>

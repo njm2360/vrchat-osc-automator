@@ -64,4 +64,16 @@ public sealed class DialogService : IDialogService
         };
         return window.ShowDialog() == true ? viewModel.ToSettings() : null;
     }
+
+    public KeyRepeatSettings? ShowKeyRepeatSettingsWindow(KeyRepeatSettings currentSettings)
+    {
+        KeyRepeatSettingsViewModel viewModel = new();
+        viewModel.LoadFromSettings(currentSettings);
+        KeyRepeatSettingsWindow window = new()
+        {
+            DataContext = viewModel,
+            Owner = Application.Current.MainWindow,
+        };
+        return window.ShowDialog() == true ? viewModel.ToSettings() : null;
+    }
 }
