@@ -61,5 +61,27 @@ public sealed record VirtualKeyItem(int Code, string Name)
         new(0x30, "0"), new(0x31, "1"), new(0x32, "2"), new(0x33, "3"),
         new(0x34, "4"), new(0x35, "5"), new(0x36, "6"), new(0x37, "7"),
         new(0x38, "8"), new(0x39, "9"),
+
+        // ── 記号 (jp109前提  後で直す) ──────────────────────
+        new(0xBD, "- _"),
+        new(0xBB, "= +"),
+        new(0xDB, "[ {"),
+        new(0xDD, "] }"),
+        new(0xDC, "\\ |"),
+        new(0xBA, "; :"),
+        new(0xDE, "' \""),
+        new(0xBC, ", <"),
+        new(0xBE, ". >"),
+        new(0xBF, "/ ?"),
+        new(0xC0, "` ~"),
+
+        // ── ロック ────────────────────────────────────────
+        new(0x14, "Caps Lock"),
+        new(0x90, "Num Lock"),
+        new(0x91, "Scroll Lock"),
+
+        // ── システム ──────────────────────────────────────
+        new(0x2C, "Print Screen"),
+        new(0x13, "Pause/Break"),
     ];
 }

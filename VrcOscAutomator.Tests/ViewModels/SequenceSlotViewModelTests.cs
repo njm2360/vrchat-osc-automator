@@ -245,7 +245,7 @@ public class SequenceSlotViewModelTests
     public void ParameterSummary_LoopBegin_ShowsRepeatCount()
     {
         var vm = new SequenceSlotViewModel { SelectedPreset = LoopBeginPreset, RepeatCount = 4 };
-        vm.ParameterSummary.Should().Be("× 4 回");
+        vm.ParameterSummary.Should().Be("x 4 回");
     }
 
     [Fact]

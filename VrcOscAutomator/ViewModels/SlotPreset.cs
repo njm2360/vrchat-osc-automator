@@ -15,6 +15,9 @@ public abstract record SlotPreset(string Name)
     public bool IsLoopMarker => this is LoopBeginPreset or LoopEndPreset;
     public bool IsKeyboardSingle => this is KeySinglePreset;
     public bool IsKeyboardTypeString => this is KeyTypeStringPreset;
+    public bool IsMouseButton => this is MouseButtonPreset;
+    public bool IsMouseWheel => this is MouseWheelPreset;
+    public bool IsMouseMove => this is MouseMovePreset;
 
     // ─── 定義済みプリセット一覧 ───────────────────────────────────────
     public static readonly IReadOnlyList<SlotPreset> All =
@@ -65,6 +68,11 @@ public abstract record SlotPreset(string Name)
         new KeySinglePreset("キー送信"),
         new KeyTypeStringPreset("文字入力"),
 
+        // マウス
+        new MouseButtonPreset("マウスボタン"),
+        new MouseWheelPreset("マウスホイール"),
+        new MouseMovePreset("マウス移動"),
+
         // カスタム
         new CustomPreset("カスタム"),
     ];
@@ -83,3 +91,9 @@ public sealed record BuiltinPreset(string Name, string Address, OscValueType Val
 public sealed record KeySinglePreset(string Name) : SlotPreset(Name);
 
 public sealed record KeyTypeStringPreset(string Name) : SlotPreset(Name);
+
+public sealed record MouseButtonPreset(string Name) : SlotPreset(Name);
+
+public sealed record MouseWheelPreset(string Name) : SlotPreset(Name);
+
+public sealed record MouseMovePreset(string Name) : SlotPreset(Name);

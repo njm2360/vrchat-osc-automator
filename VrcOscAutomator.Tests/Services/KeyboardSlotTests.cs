@@ -12,11 +12,12 @@ public class KeyboardSlotTests : IDisposable
 {
     private readonly Mock<IOscSender>      _osc      = new(MockBehavior.Loose);
     private readonly Mock<IKeyboardSender> _keyboard = new(MockBehavior.Loose);
+    private readonly Mock<IMouseSender>    _mouse    = new(MockBehavior.Loose);
     private readonly SequencePlayerService _sut;
 
     public KeyboardSlotTests()
     {
-        _sut = new SequencePlayerService(_osc.Object, _keyboard.Object);
+        _sut = new SequencePlayerService(_osc.Object, _keyboard.Object, _mouse.Object);
     }
 
     public void Dispose() => _sut.Dispose();

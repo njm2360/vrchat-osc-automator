@@ -3,6 +3,8 @@ using System.Text.RegularExpressions;
 using CommunityToolkit.Mvvm.ComponentModel;
 using VrcOscAutomator.Models;
 using KeyAction = VrcOscAutomator.Models.KeyAction;
+using MouseButton = VrcOscAutomator.Models.MouseButton;
+using MouseMoveMode = VrcOscAutomator.Models.MouseMoveMode;
 
 namespace VrcOscAutomator.ViewModels;
 
@@ -24,10 +26,14 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsStringMode))]
     [NotifyPropertyChangedFor(nameof(IsKeyboardSingleMode))]
     [NotifyPropertyChangedFor(nameof(IsKeyboardTypeStringMode))]
+    [NotifyPropertyChangedFor(nameof(IsMouseButtonMode))]
+    [NotifyPropertyChangedFor(nameof(IsMouseWheelMode))]
+    [NotifyPropertyChangedFor(nameof(IsMouseMoveMode))]
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
     [NotifyPropertyChangedFor(nameof(Value))]
     [NotifyPropertyChangedFor(nameof(IsValid))]
-    private SlotPreset _selectedPreset = SlotPreset.All[0];
+    public partial SlotPreset SelectedPreset { get; set; } = SlotPreset.All[0];
+
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
@@ -35,20 +41,21 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsIntMode))]
     [NotifyPropertyChangedFor(nameof(IsBoolMode))]
     [NotifyPropertyChangedFor(nameof(IsStringMode))]
-    private OscValueType _customValueType = OscValueType.Float;
+    public partial OscValueType CustomValueType { get; set; } = OscValueType.Float;
+
 
     partial void OnCustomValueTypeChanged(OscValueType value) => Value = 0f;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
     [NotifyPropertyChangedFor(nameof(BoolValue))]
-    private float _value;
+    public partial float Value { get; set; }
+
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
     [NotifyPropertyChangedFor(nameof(IsValid))]
-    private string _customAddress = string.Empty;
-
+    public partial string CustomAddress { get; set; } = string.Empty;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
     public partial string StringValue { get; set; } = "";
@@ -101,6 +108,71 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
     private bool _appendNewline;
 
+    // ── マウスボタン ──────────────────────────────────────────────────
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
+    [NotifyPropertyChangedFor(nameof(IsMouseButtonLeft))]
+    [NotifyPropertyChangedFor(nameof(IsMouseButtonRight))]
+    [NotifyPropertyChangedFor(nameof(IsMouseButtonMiddle))]
+    private MouseButton _selectedMouseButton = MouseButton.Left;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
+    [NotifyPropertyChangedFor(nameof(IsMouseButtonActionPress))]
+    [NotifyPropertyChangedFor(nameof(IsMouseButtonActionRelease))]
+    private KeyAction _selectedMouseButtonAction = KeyAction.Press;
+
+    public bool IsMouseButtonActionPress
+    {
+        get => SelectedMouseButtonAction == KeyAction.Press;
+        set { if (value) SelectedMouseButtonAction = KeyAction.Press; }
+    }
+
+    public bool IsMouseButtonActionRelease
+    {
+        get => SelectedMouseButtonAction == KeyAction.Release;
+        set { if (value) SelectedMouseButtonAction = KeyAction.Release; }
+    }
+
+    public bool IsMouseButtonLeft { get => SelectedMouseButton == MouseButton.Left; set { if (value) SelectedMouseButton = MouseButton.Left; } }
+    public bool IsMouseButtonRight { get => SelectedMouseButton == MouseButton.Right; set { if (value) SelectedMouseButton = MouseButton.Right; } }
+    public bool IsMouseButtonMiddle { get => SelectedMouseButton == MouseButton.Middle; set { if (value) SelectedMouseButton = MouseButton.Middle; } }
+
+    // ── マウスホイール ────────────────────────────────────────────────
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
+    private int _wheelClicks = 1;
+
+    // ── マウス移動 ────────────────────────────────────────────────────
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
+    private int _mouseMoveX;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
+    private int _mouseMoveY;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
+    [NotifyPropertyChangedFor(nameof(IsMouseMoveRelative))]
+    [NotifyPropertyChangedFor(nameof(IsMouseMoveAbsolute))]
+    private MouseMoveMode _selectedMouseMoveMode = MouseMoveMode.Relative;
+
+    public bool IsMouseMoveRelative
+    {
+        get => SelectedMouseMoveMode == MouseMoveMode.Relative;
+        set { if (value) SelectedMouseMoveMode = MouseMoveMode.Relative; }
+    }
+
+    public bool IsMouseMoveAbsolute
+    {
+        get => SelectedMouseMoveMode == MouseMoveMode.Absolute;
+        set { if (value) SelectedMouseMoveMode = MouseMoveMode.Absolute; }
+    }
+
     /// <summary>Bool 型の値を bool として読み書きするビュー用プロパティ。</summary>
     public bool BoolValue
     {
@@ -115,8 +187,10 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
     public bool IsDurationEditable => SelectedPreset is not (LoopBeginPreset or LoopEndPreset);
 
     public bool IsKeyboardSingleMode => SelectedPreset is KeySinglePreset;
-
     public bool IsKeyboardTypeStringMode => SelectedPreset is KeyTypeStringPreset;
+    public bool IsMouseButtonMode => SelectedPreset is MouseButtonPreset;
+    public bool IsMouseWheelMode => SelectedPreset is MouseWheelPreset;
+    public bool IsMouseMoveMode => SelectedPreset is MouseMovePreset;
 
     private OscValueType? EffectiveValueType => SelectedPreset switch
     {
@@ -132,13 +206,18 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
 
     public string ParameterSummary => SelectedPreset switch
     {
-        LoopBeginPreset => RepeatCount == 0 ? "× ∞ 回" : $"× {RepeatCount} 回",
+        LoopBeginPreset => RepeatCount == 0 ? "エンドレス" : $"x {RepeatCount} 回",
         LoopEndPreset => "—",
         WaitPreset => "—",
-        KeySinglePreset => $"{SelectedKey.Name} [{(SelectedKeyAction == KeyAction.Press ? "PRESS" : "RELEASE")}]",
+        KeySinglePreset => $"{SelectedKey.Name} [{(SelectedKeyAction == KeyAction.Press ? "押す" : "離す")}]",
         KeyTypeStringPreset => TypeText.Length == 0
             ? "(未入力)"
             : $"\"{Truncate(TypeText, 20)}\"{(AppendNewline ? " ↵" : "")}",
+        MouseButtonPreset => $"{MouseButtonLabel(SelectedMouseButton)} [{(SelectedMouseButtonAction == KeyAction.Press ? "押す" : "離す")}]",
+        MouseWheelPreset => WheelClicks > 0 ? $"↑ {WheelClicks} クリック" : WheelClicks < 0 ? $"↓ {-WheelClicks} クリック" : "0",
+        MouseMovePreset => SelectedMouseMoveMode == MouseMoveMode.Relative
+            ? $"相対 (Δ{MouseMoveX:+#;-#;0}, Δ{MouseMoveY:+#;-#;0})"
+            : $"絶対 ({MouseMoveX}, {MouseMoveY})",
         CustomPreset => CustomAddress.Length > 0
                                ? $"{CustomAddress} [{CustomValueType}] = {ValueSummary}"
                                : $"(アドレス未設定) [{CustomValueType}] = {ValueSummary}",
@@ -147,6 +226,14 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
     };
 
     private static string Truncate(string s, int max) => s.Length <= max ? s : s[..max] + "…";
+
+    private static string MouseButtonLabel(MouseButton b) => b switch
+    {
+        MouseButton.Left => "左ボタン",
+        MouseButton.Right => "右ボタン",
+        MouseButton.Middle => "中ボタン",
+        _ => "?",
+    };
 
     private string ValueSummary => CustomValueType switch
     {
@@ -163,6 +250,9 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
         WaitPreset => new WaitSlot(DurationMs),
         KeySinglePreset => new KeySingleSlot(SelectedKey.Code, SelectedKeyAction, DurationMs),
         KeyTypeStringPreset => new KeyTypeStringSlot(TypeText, AppendNewline, DurationMs),
+        MouseButtonPreset => new MouseButtonSlot(SelectedMouseButton, SelectedMouseButtonAction, DurationMs),
+        MouseWheelPreset => new MouseWheelSlot(WheelClicks, DurationMs),
+        MouseMovePreset => new MouseMoveSlot(MouseMoveX, MouseMoveY, SelectedMouseMoveMode, DurationMs),
         BuiltinPreset bp => OscSlot(bp.Address, bp.ValueType),
         CustomPreset => OscSlot(CustomAddress, CustomValueType),
         _ => throw new UnreachableException(),
@@ -194,6 +284,27 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
             TypeText = kts.Text,
             AppendNewline = kts.AppendNewline,
             DurationMs = kts.DurationMs,
+        },
+        MouseButtonSlot mb => new()
+        {
+            SelectedPreset = SlotPreset.All.OfType<MouseButtonPreset>().First(),
+            SelectedMouseButton = mb.Button,
+            SelectedMouseButtonAction = mb.Action,
+            DurationMs = mb.DurationMs,
+        },
+        MouseWheelSlot mw => new()
+        {
+            SelectedPreset = SlotPreset.All.OfType<MouseWheelPreset>().First(),
+            WheelClicks = mw.Clicks,
+            DurationMs = mw.DurationMs,
+        },
+        MouseMoveSlot mm => new()
+        {
+            SelectedPreset = SlotPreset.All.OfType<MouseMovePreset>().First(),
+            MouseMoveX = mm.X,
+            MouseMoveY = mm.Y,
+            SelectedMouseMoveMode = mm.Mode,
+            DurationMs = mm.DurationMs,
         },
         FloatSlot f => BuildOscVm(f.Address, OscValueType.Float, f.Value, null, f.DurationMs, f.ResetOnComplete),
         IntSlot n => BuildOscVm(n.Address, OscValueType.Int, n.Value, null, n.DurationMs, n.ResetOnComplete),

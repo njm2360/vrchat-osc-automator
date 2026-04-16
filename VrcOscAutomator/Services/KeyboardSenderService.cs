@@ -9,9 +9,9 @@ public sealed class KeyboardSenderService : IKeyboardSender
     [DllImport("user32.dll", SetLastError = true)]
     private static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
 
-    private const uint INPUT_KEYBOARD  = 1;
+    private const uint INPUT_KEYBOARD = 1;
     private const uint KEYEVENTF_KEYDOWN = 0x0000;
-    private const uint KEYEVENTF_KEYUP   = 0x0002;
+    private const uint KEYEVENTF_KEYUP = 0x0002;
     private const uint KEYEVENTF_UNICODE = 0x0004;
     private const ushort VK_RETURN = 0x0D;
 
@@ -27,16 +27,16 @@ public sealed class KeyboardSenderService : IKeyboardSender
     [StructLayout(LayoutKind.Explicit)]
     private struct InputUnion
     {
-        [FieldOffset(0)] public MOUSEINPUT    mi;
-        [FieldOffset(0)] public KEYBDINPUT    ki;
+        [FieldOffset(0)] public MOUSEINPUT mi;
+        [FieldOffset(0)] public KEYBDINPUT ki;
         [FieldOffset(0)] public HARDWAREINPUT hi;
     }
 
     [StructLayout(LayoutKind.Sequential)]
     private struct MOUSEINPUT
     {
-        public int    dx, dy;
-        public uint   mouseData, dwFlags, time;
+        public int dx, dy;
+        public uint mouseData, dwFlags, time;
         public IntPtr dwExtraInfo;
     }
 
@@ -45,15 +45,15 @@ public sealed class KeyboardSenderService : IKeyboardSender
     {
         public ushort wVk;
         public ushort wScan;
-        public uint   dwFlags;
-        public uint   time;
+        public uint dwFlags;
+        public uint time;
         public IntPtr dwExtraInfo;
     }
 
     [StructLayout(LayoutKind.Sequential)]
     private struct HARDWAREINPUT
     {
-        public uint   uMsg;
+        public uint uMsg;
         public ushort wParamL, wParamH;
     }
 

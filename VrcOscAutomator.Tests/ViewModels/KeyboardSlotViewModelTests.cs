@@ -157,7 +157,7 @@ public class KeyboardSlotViewModelTests
             SelectedKey = KeyEnter,
             SelectedKeyAction = KeyAction.Press,
         };
-        vm.ParameterSummary.Should().Be("Enter [PRESS]");
+        vm.ParameterSummary.Should().Be("Enter [押す]");
     }
 
     [Fact]
@@ -169,7 +169,7 @@ public class KeyboardSlotViewModelTests
             SelectedKey = KeyA,
             SelectedKeyAction = KeyAction.Release,
         };
-        vm.ParameterSummary.Should().Be("A [RELEASE]");
+        vm.ParameterSummary.Should().Be("A [離す]");
     }
 
     [Fact]

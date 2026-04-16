@@ -67,3 +67,16 @@ public record KeySingleSlot(int VirtualKey, KeyAction Action, int DurationMs = 0
 public record KeyTypeStringSlot(string Text, bool AppendNewline = false, int DurationMs = 0) : SequenceSlot;
 
 public enum KeyAction { Press, Release }
+
+/// <summary>マウスボタンを PRESS または RELEASE するスロット。</summary>
+public record MouseButtonSlot(MouseButton Button, KeyAction Action, int DurationMs = 0) : SequenceSlot;
+
+/// <summary>マウスホイールをスクロールするスロット。正値=上、負値=下。</summary>
+public record MouseWheelSlot(int Clicks, int DurationMs = 0) : SequenceSlot;
+
+/// <summary>マウスカーソルを移動するスロット。</summary>
+public record MouseMoveSlot(int X, int Y, MouseMoveMode Mode, int DurationMs = 0) : SequenceSlot;
+
+public enum MouseButton { Left, Right, Middle }
+
+public enum MouseMoveMode { Relative, Absolute }

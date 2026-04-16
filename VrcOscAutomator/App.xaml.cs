@@ -16,6 +16,7 @@ public partial class App : Application
         ServiceCollection services = new();
         services.AddSingleton<IOscSender, OscSenderService>();
         services.AddSingleton<IKeyboardSender, KeyboardSenderService>();
+        services.AddSingleton<IMouseSender, MouseSenderService>();
         services.AddSingleton<ISettingsRepository, JsonSettingsRepository>();
         services.AddSingleton<ISequencePlayer, SequencePlayerService>();
         services.AddSingleton<IDialogService, DialogService>();

@@ -3,7 +3,7 @@ using VrcOscAutomator.Models;
 
 namespace VrcOscAutomator.Services;
 
-public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender keyboardSender) : ISequencePlayer
+public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender keyboardSender, IMouseSender mouseSender) : ISequencePlayer
 {
     private CancellationTokenSource? _stopCts;
 
@@ -90,6 +90,9 @@ public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender 
                         WaitSlot w => w.DurationMs,
                         KeySingleSlot ks => ks.DurationMs,
                         KeyTypeStringSlot kts => kts.DurationMs,
+                        MouseButtonSlot mb => mb.DurationMs,
+                        MouseWheelSlot mw => mw.DurationMs,
+                        MouseMoveSlot mm => mm.DurationMs,
                         _ => 0,
                     };
 
@@ -107,6 +110,15 @@ public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender 
                         case KeyTypeStringSlot kts:
                             string text = kts.AppendNewline ? kts.Text + "\n" : kts.Text;
                             keyboardSender.TypeString(text);
+                            break;
+                        case MouseButtonSlot mb:
+                            mouseSender.SendMouseButton(mb.Button, mb.Action);
+                            break;
+                        case MouseWheelSlot mw:
+                            mouseSender.SendMouseWheel(mw.Clicks);
+                            break;
+                        case MouseMoveSlot mm:
+                            mouseSender.SendMouseMove(mm.X, mm.Y, mm.Mode);
                             break;
                     }
 

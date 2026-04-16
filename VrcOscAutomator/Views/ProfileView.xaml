@@ -172,14 +172,14 @@
 
                             <!-- キー送信(単押し) -->
                             <StackPanel Visibility="{Binding SelectedPreset.IsKeyboardSingle, Converter={StaticResource BoolToVis}}">
-                                <!-- アクション (PRESS / RELEASE) -->
+                                <!-- アクション -->
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                                     <TextBlock Text="アクション:" Width="96"
                                                VerticalAlignment="Center" Foreground="#444" />
-                                    <RadioButton Content="PRESS" Margin="0,0,16,0"
+                                    <RadioButton Content="押す" Margin="0,0,16,0"
                                                  IsChecked="{Binding IsKeyActionPress, UpdateSourceTrigger=PropertyChanged}"
                                                  VerticalAlignment="Center" />
-                                    <RadioButton Content="RELEASE"
+                                    <RadioButton Content="離す"
                                                  IsChecked="{Binding IsKeyActionRelease, UpdateSourceTrigger=PropertyChanged}"
                                                  VerticalAlignment="Center" />
                                 </StackPanel>
@@ -204,10 +204,80 @@
                                     <TextBox Text="{Binding TypeText, UpdateSourceTrigger=PropertyChanged}"
                                              Width="260" VerticalAlignment="Center" />
                                 </StackPanel>
-                                <!-- 改行チェック -->
-                                <CheckBox Content="末尾に改行を追加 (Enter キー)"
+                                <!-- 改行 -->
+                                <CheckBox Content="改行を送信する"
                                           IsChecked="{Binding AppendNewline, UpdateSourceTrigger=PropertyChanged}"
                                           Margin="96,0,0,0" />
+                            </StackPanel>
+
+                            <!-- マウスボタン -->
+                            <StackPanel Visibility="{Binding SelectedPreset.IsMouseButton, Converter={StaticResource BoolToVis}}">
+                                <!-- ボタン選択 -->
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                    <TextBlock Text="ボタン:" Width="96"
+                                               VerticalAlignment="Center" Foreground="#444" />
+                                    <RadioButton Content="左" Margin="0,0,16,0"
+                                                 IsChecked="{Binding IsMouseButtonLeft, UpdateSourceTrigger=PropertyChanged}"
+                                                 VerticalAlignment="Center" />
+                                    <RadioButton Content="右" Margin="0,0,16,0"
+                                                 IsChecked="{Binding IsMouseButtonRight, UpdateSourceTrigger=PropertyChanged}"
+                                                 VerticalAlignment="Center" />
+                                    <RadioButton Content="中"
+                                                 IsChecked="{Binding IsMouseButtonMiddle, UpdateSourceTrigger=PropertyChanged}"
+                                                 VerticalAlignment="Center" />
+                                </StackPanel>
+                                <!-- アクション -->
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="アクション:" Width="96"
+                                               VerticalAlignment="Center" Foreground="#444" />
+                                    <RadioButton Content="押す" Margin="0,0,16,0"
+                                                 IsChecked="{Binding IsMouseButtonActionPress, UpdateSourceTrigger=PropertyChanged}"
+                                                 VerticalAlignment="Center" />
+                                    <RadioButton Content="離す"
+                                                 IsChecked="{Binding IsMouseButtonActionRelease, UpdateSourceTrigger=PropertyChanged}"
+                                                 VerticalAlignment="Center" />
+                                </StackPanel>
+                            </StackPanel>
+
+                            <!-- マウスホイール -->
+                            <StackPanel Orientation="Horizontal"
+                                        Visibility="{Binding SelectedPreset.IsMouseWheel, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="スクロール量:" Width="96"
+                                           VerticalAlignment="Center" Foreground="#444" />
+                                <TextBox Text="{Binding WheelClicks, UpdateSourceTrigger=PropertyChanged}"
+                                         Width="60" VerticalAlignment="Center"
+                                         b:NumericTextBoxBehavior.RefreshOnLostFocus="True" />
+                                <TextBlock Text="クリック"
+                                           Margin="8,0,0,0" VerticalAlignment="Center"
+                                           Foreground="#888" FontSize="11" />
+                            </StackPanel>
+
+                            <!-- マウス移動 -->
+                            <StackPanel Visibility="{Binding SelectedPreset.IsMouseMove, Converter={StaticResource BoolToVis}}">
+                                <!-- 相対 / 絶対 -->
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                    <TextBlock Text="移動方式:" Width="96"
+                                               VerticalAlignment="Center" Foreground="#444" />
+                                    <RadioButton Content="相対" Margin="0,0,16,0"
+                                                 IsChecked="{Binding IsMouseMoveRelative, UpdateSourceTrigger=PropertyChanged}"
+                                                 VerticalAlignment="Center" />
+                                    <RadioButton Content="絶対"
+                                                 IsChecked="{Binding IsMouseMoveAbsolute, UpdateSourceTrigger=PropertyChanged}"
+                                                 VerticalAlignment="Center" />
+                                </StackPanel>
+                                <!-- 座標入力 -->
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="X:" Width="20"
+                                               VerticalAlignment="Center" Foreground="#444" />
+                                    <TextBox Text="{Binding MouseMoveX, UpdateSourceTrigger=PropertyChanged}"
+                                             Width="72" VerticalAlignment="Center"
+                                             b:NumericTextBoxBehavior.RefreshOnLostFocus="True" />
+                                    <TextBlock Text="Y:" Width="20" Margin="10,0,0,0"
+                                               VerticalAlignment="Center" Foreground="#444" />
+                                    <TextBox Text="{Binding MouseMoveY, UpdateSourceTrigger=PropertyChanged}"
+                                             Width="72" VerticalAlignment="Center"
+                                             b:NumericTextBoxBehavior.RefreshOnLostFocus="True" />
+                                </StackPanel>
                             </StackPanel>
 
                         </StackPanel>
