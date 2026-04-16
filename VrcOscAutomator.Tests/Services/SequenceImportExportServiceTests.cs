@@ -41,7 +41,7 @@ public class SequenceImportExportServiceTests
         string json = _sut.Export(slots);
 
         using var doc = JsonDocument.Parse(json);
-        doc.RootElement[0].GetProperty("Type").GetString().Should().Be("float");
+        doc.RootElement[0].GetProperty("type").GetString().Should().Be("float");
     }
 
     // ─── Import ────────────────────────────────────────────────────────────

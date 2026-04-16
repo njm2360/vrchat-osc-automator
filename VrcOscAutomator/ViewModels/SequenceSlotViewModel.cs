@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Text.RegularExpressions;
 using CommunityToolkit.Mvvm.ComponentModel;
 using VrcOscAutomator.Models;
 
@@ -5,6 +7,9 @@ namespace VrcOscAutomator.ViewModels;
 
 public sealed partial class SequenceSlotViewModel : ObservableObject
 {
+    [GeneratedRegex(@"^(/[^ #*,?/\[\]{}]+)+$")]
+    private static partial Regex OscAddressRegex();
+
     public static IReadOnlyList<SlotPreset> AvailablePresets => SlotPreset.All;
     public static IReadOnlyList<OscValueType> AvailableValueTypes => [OscValueType.Float, OscValueType.Int, OscValueType.Bool, OscValueType.String];
 
@@ -45,13 +50,13 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
     public partial string StringValue { get; set; } = "";
 
     [ObservableProperty]
-    private int _durationMs = 500;
+    public partial int DurationMs { get; set; } = 500;
 
     [ObservableProperty]
-    private bool _resetOnComplete = true;
+    public partial bool ResetOnComplete { get; set; } = true;
 
     [ObservableProperty]
-    private bool _isCurrentSlot;
+    public partial bool IsCurrentSlot { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
@@ -64,37 +69,34 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
         set => Value = value ? 1f : 0f;
     }
 
-    /// <summary>カスタムプリセットでアドレスが '/' 始まりでない場合は無効。</summary>
-    public bool IsValid => !SelectedPreset.IsCustom || CustomAddress.StartsWith('/');
+    public bool IsValid => SelectedPreset is not CustomPreset || OscAddressRegex().IsMatch(CustomAddress);
 
-    /// <summary>ResetOnComplete を表示すべきスロット（定義済みOSCプリセットのみ）。</summary>
-    public bool ShowResetOption => SelectedPreset.IsBuiltinPreset;
+    public bool ShowResetOption => SelectedPreset is BuiltinPreset;
 
-    /// <summary>待機時間を設定できるスロット（ループマーカー以外）。</summary>
-    public bool IsDurationEditable => !SelectedPreset.IsLoopMarker;
+    public bool IsDurationEditable => SelectedPreset is not (LoopBeginPreset or LoopEndPreset);
 
-    /// <summary>OSC 送信スロットの実効値型。待機・ループマーカーは null。</summary>
-    private OscValueType? EffectiveValueType =>
-        SelectedPreset.IsBuiltinPreset ? SelectedPreset.ValueType :
-        SelectedPreset.IsCustom        ? CustomValueType :
-        null;
+    private OscValueType? EffectiveValueType => SelectedPreset switch
+    {
+        BuiltinPreset { ValueType: var vt } => vt,
+        CustomPreset => CustomValueType,
+        _ => null,
+    };
 
-    public bool IsFloatMode  => EffectiveValueType == OscValueType.Float;
-    public bool IsIntMode    => EffectiveValueType == OscValueType.Int;
-    public bool IsBoolMode   => EffectiveValueType == OscValueType.Bool;
+    public bool IsFloatMode => EffectiveValueType == OscValueType.Float;
+    public bool IsIntMode => EffectiveValueType == OscValueType.Int;
+    public bool IsBoolMode => EffectiveValueType == OscValueType.Bool;
     public bool IsStringMode => EffectiveValueType == OscValueType.String;
 
     public string ParameterSummary => SelectedPreset switch
     {
-        { IsLoopBegin: true } => RepeatCount == 0 ? "× ∞ 回" : $"× {RepeatCount} 回",
-        { IsLoopEnd: true } => "—",
-        { IsWait: true } => "—",
-        { IsCustom: true } => CustomAddress.Length > 0
-                                    ? $"{CustomAddress} [{CustomValueType}] = {ValueSummary}"
-                                    : $"(アドレス未設定) [{CustomValueType}] = {ValueSummary}",
-        _ => SelectedPreset.IsBuiltinInt
-                ? ((int)Value == 1 ? "1 (ON)" : "0 (OFF)")
-                : $"{Value:F2}",
+        LoopBeginPreset => RepeatCount == 0 ? "× ∞ 回" : $"× {RepeatCount} 回",
+        LoopEndPreset => "—",
+        WaitPreset => "—",
+        CustomPreset => CustomAddress.Length > 0
+                               ? $"{CustomAddress} [{CustomValueType}] = {ValueSummary}"
+                               : $"(アドレス未設定) [{CustomValueType}] = {ValueSummary}",
+        BuiltinPreset { ValueType: OscValueType.Int } => (int)Value == 1 ? "1 (ON)" : "0 (OFF)",
+        _ => $"{Value:F2}",
     };
 
     private string ValueSummary => CustomValueType switch
@@ -105,29 +107,29 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
         _ => $"{Value:F3}",
     };
 
-    public SequenceSlot ToModel()
+    public SequenceSlot ToModel() => SelectedPreset switch
     {
-        if (SelectedPreset.IsLoopBegin) return new LoopBeginSlot(RepeatCount);
-        if (SelectedPreset.IsLoopEnd) return new LoopEndSlot();
-        if (SelectedPreset.IsWait) return new WaitSlot(DurationMs);
+        LoopBeginPreset => new LoopBeginSlot(RepeatCount),
+        LoopEndPreset => new LoopEndSlot(),
+        WaitPreset => new WaitSlot(DurationMs),
+        BuiltinPreset bp => OscSlot(bp.Address, bp.ValueType),
+        CustomPreset => OscSlot(CustomAddress, CustomValueType),
+        _ => throw new UnreachableException(),
+    };
 
-        string address = SelectedPreset.IsCustom ? CustomAddress : SelectedPreset.Address!;
-        OscValueType vt = SelectedPreset.IsCustom ? CustomValueType : SelectedPreset.ValueType;
-
-        return vt switch
-        {
-            OscValueType.Int => new IntSlot(address, (int)Value, DurationMs, ResetOnComplete),
-            OscValueType.Bool => new BoolSlot(address, Value != 0f, DurationMs, ResetOnComplete),
-            OscValueType.String => new StringSlot(address, StringValue, DurationMs, ResetOnComplete),
-            _ => new FloatSlot(address, Value, DurationMs, ResetOnComplete),
-        };
-    }
+    private SequenceSlot OscSlot(string address, OscValueType vt) => vt switch
+    {
+        OscValueType.Int => new IntSlot(address, (int)Value, DurationMs, ResetOnComplete),
+        OscValueType.Bool => new BoolSlot(address, Value != 0f, DurationMs, ResetOnComplete),
+        OscValueType.String => new StringSlot(address, StringValue, DurationMs, ResetOnComplete),
+        _ => new FloatSlot(address, Value, DurationMs, ResetOnComplete),
+    };
 
     public static SequenceSlotViewModel FromModel(SequenceSlot slot) => slot switch
     {
-        LoopBeginSlot lb => new() { SelectedPreset = SlotPreset.All.First(p => p.IsLoopBegin), RepeatCount = lb.RepeatCount },
-        LoopEndSlot => new() { SelectedPreset = SlotPreset.All.First(p => p.IsLoopEnd) },
-        WaitSlot w => new() { SelectedPreset = SlotPreset.All.First(p => p.IsWait), DurationMs = w.DurationMs },
+        LoopBeginSlot lb => new() { SelectedPreset = SlotPreset.All.OfType<LoopBeginPreset>().First(), RepeatCount = lb.RepeatCount },
+        LoopEndSlot => new() { SelectedPreset = SlotPreset.All.OfType<LoopEndPreset>().First() },
+        WaitSlot w => new() { SelectedPreset = SlotPreset.All.OfType<WaitPreset>().First(), DurationMs = w.DurationMs },
         FloatSlot f => BuildOscVm(f.Address, OscValueType.Float, f.Value, null, f.DurationMs, f.ResetOnComplete),
         IntSlot n => BuildOscVm(n.Address, OscValueType.Int, n.Value, null, n.DurationMs, n.ResetOnComplete),
         BoolSlot b => BuildOscVm(b.Address, OscValueType.Bool, b.Value ? 1f : 0f, null, b.DurationMs, b.ResetOnComplete),
@@ -139,16 +141,15 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
         string address, OscValueType vt, float floatVal,
         string? strVal, int durationMs, bool resetOnComplete)
     {
-        SlotPreset preset = SlotPreset.All.FirstOrDefault(
-                                p => p.Address == address && !p.IsLoopBegin && !p.IsLoopEnd && !p.IsWait)
-                         ?? SlotPreset.All.First(p => p.IsCustom);
+        SlotPreset preset = SlotPreset.All.FirstOrDefault(p => p is BuiltinPreset bp && bp.Address == address)
+                         ?? SlotPreset.All.First(p => p is CustomPreset);
         return new()
         {
             SelectedPreset = preset,
             Value = floatVal,
-            StringValue = preset.IsCustom ? (strVal ?? string.Empty) : string.Empty,
-            CustomValueType = preset.IsCustom ? vt : OscValueType.Float,
-            CustomAddress = preset.IsCustom ? address : string.Empty,
+            StringValue = preset is CustomPreset ? (strVal ?? string.Empty) : string.Empty,
+            CustomValueType = preset is CustomPreset ? vt : OscValueType.Float,
+            CustomAddress = preset is CustomPreset ? address : string.Empty,
             DurationMs = durationMs,
             ResetOnComplete = resetOnComplete,
         };
