@@ -98,6 +98,7 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
     [NotifyPropertyChangedFor(nameof(IsKeyActionPress))]
     [NotifyPropertyChangedFor(nameof(IsKeyActionRelease))]
+    [NotifyPropertyChangedFor(nameof(IsKeyActionPressAndRelease))]
     private KeyAction _selectedKeyAction = KeyAction.Press;
 
     /// <summary>RadioButton バインディング用。</summary>
@@ -111,6 +112,12 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
     {
         get => SelectedKeyAction == KeyAction.Release;
         set { if (value) SelectedKeyAction = KeyAction.Release; }
+    }
+
+    public bool IsKeyActionPressAndRelease
+    {
+        get => SelectedKeyAction == KeyAction.PressAndRelease;
+        set { if (value) SelectedKeyAction = KeyAction.PressAndRelease; }
     }
 
     // ── キーボード (文字入力) ─────────────────────────────────────────
@@ -136,6 +143,7 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
     [NotifyPropertyChangedFor(nameof(IsMouseButtonActionPress))]
     [NotifyPropertyChangedFor(nameof(IsMouseButtonActionRelease))]
+    [NotifyPropertyChangedFor(nameof(IsMouseButtonActionPressAndRelease))]
     private KeyAction _selectedMouseButtonAction = KeyAction.Press;
 
     public bool IsMouseButtonActionPress
@@ -148,6 +156,12 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
     {
         get => SelectedMouseButtonAction == KeyAction.Release;
         set { if (value) SelectedMouseButtonAction = KeyAction.Release; }
+    }
+
+    public bool IsMouseButtonActionPressAndRelease
+    {
+        get => SelectedMouseButtonAction == KeyAction.PressAndRelease;
+        set { if (value) SelectedMouseButtonAction = KeyAction.PressAndRelease; }
     }
 
     public bool IsMouseButtonLeft { get => SelectedMouseButton == MouseButton.Left; set { if (value) SelectedMouseButton = MouseButton.Left; } }
@@ -231,11 +245,11 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
         LoopEndPreset => "—",
         WaitPreset => "—",
         BreakpointPreset => "—",
-        KeySinglePreset => $"{SelectedKey.Name} [{(SelectedKeyAction == KeyAction.Press ? "押す" : "離す")}]",
+        KeySinglePreset => $"{SelectedKey.Name} [{SelectedKeyAction switch { KeyAction.Press => "押す", KeyAction.Release => "離す", _ => "押して離す" }}]",
         KeyTypeStringPreset => TypeText.Length == 0
             ? "(未入力)"
             : $"\"{Truncate(TypeText, 20)}\"{(AppendNewline ? " ↵" : "")}",
-        MouseButtonPreset => $"{MouseButtonLabel(SelectedMouseButton)} [{(SelectedMouseButtonAction == KeyAction.Press ? "押す" : "離す")}]",
+        MouseButtonPreset => $"{MouseButtonLabel(SelectedMouseButton)} [{SelectedMouseButtonAction switch { KeyAction.Press => "押す", KeyAction.Release => "離す", _ => "押して離す" }}]",
         MouseWheelPreset => WheelClicks > 0 ? $"↑ {WheelClicks} クリック" : WheelClicks < 0 ? $"↓ {-WheelClicks} クリック" : "0",
         MouseMovePreset => SelectedMouseMoveMode == MouseMoveMode.Relative
             ? $"相対 (Δ{MouseMoveX:+#;-#;0}, Δ{MouseMoveY:+#;-#;0})"

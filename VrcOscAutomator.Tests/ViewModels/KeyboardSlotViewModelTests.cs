@@ -318,6 +318,77 @@ public class KeyboardSlotViewModelTests
         vm.DurationMs.Should().Be(400);
     }
 
+    // ─── IsKeyActionPressAndRelease ───────────────────────────────────────
+
+    [Fact]
+    public void IsKeyActionPressAndRelease_Default_False()
+    {
+        var vm = new SequenceSlotViewModel { SelectedPreset = KeySinglePreset };
+        vm.IsKeyActionPressAndRelease.Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsKeyActionPressAndRelease_SetToPressAndRelease_TrueOthersFalse()
+    {
+        var vm = new SequenceSlotViewModel
+        {
+            SelectedPreset = KeySinglePreset,
+            SelectedKeyAction = KeyAction.PressAndRelease,
+        };
+        vm.IsKeyActionPressAndRelease.Should().BeTrue();
+        vm.IsKeyActionPress.Should().BeFalse();
+        vm.IsKeyActionRelease.Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsKeyActionPressAndRelease_Setter_UpdatesSelectedKeyAction()
+    {
+        var vm = new SequenceSlotViewModel { SelectedPreset = KeySinglePreset };
+        vm.IsKeyActionPressAndRelease = true;
+        vm.SelectedKeyAction.Should().Be(KeyAction.PressAndRelease);
+    }
+
+    [Fact]
+    public void ParameterSummary_KeySingle_PressAndRelease_ShowsLabel()
+    {
+        var vm = new SequenceSlotViewModel
+        {
+            SelectedPreset = KeySinglePreset,
+            SelectedKey = KeyEnter,
+            SelectedKeyAction = KeyAction.PressAndRelease,
+        };
+        vm.ParameterSummary.Should().Be("Enter [押して離す]");
+    }
+
+    [Fact]
+    public void ToModel_KeySinglePreset_PressAndRelease_ReturnsPressAndReleaseAction()
+    {
+        var vm = new SequenceSlotViewModel
+        {
+            SelectedPreset = KeySinglePreset,
+            SelectedKey = KeyA,
+            SelectedKeyAction = KeyAction.PressAndRelease,
+            DurationMs = 100,
+        };
+
+        var model = (KeySingleSlot)vm.ToModel();
+        model.Action.Should().Be(KeyAction.PressAndRelease);
+        model.VirtualKey.Should().Be(0x41);
+        model.DurationMs.Should().Be(100);
+    }
+
+    [Fact]
+    public void FromModel_KeySingleSlot_PressAndRelease_RestoresAction()
+    {
+        var slot = new KeySingleSlot(0x41, KeyAction.PressAndRelease, 200);
+
+        SequenceSlotViewModel vm = SequenceSlotViewModel.FromModel(slot);
+
+        vm.SelectedKeyAction.Should().Be(KeyAction.PressAndRelease);
+        vm.IsKeyActionPressAndRelease.Should().BeTrue();
+        vm.DurationMs.Should().Be(200);
+    }
+
     // ─── ToModel / FromModel ラウンドトリップ ─────────────────────────────
 
     [Theory]
@@ -332,9 +403,10 @@ public class KeyboardSlotViewModelTests
 
     public static TheoryData<SequenceSlot> KeyboardRoundTripSlots => new()
     {
-        new KeySingleSlot(0x0D, KeyAction.Press,   200),
-        new KeySingleSlot(0x41, KeyAction.Release,   0),
-        new KeySingleSlot(0x70, KeyAction.Press,   100), // F1
+        new KeySingleSlot(0x0D, KeyAction.Press,          200),
+        new KeySingleSlot(0x41, KeyAction.Release,           0),
+        new KeySingleSlot(0x70, KeyAction.Press,           100), // F1
+        new KeySingleSlot(0x41, KeyAction.PressAndRelease, 150),
         new KeyTypeStringSlot("hello", false,  500),
         new KeyTypeStringSlot("world", true,  1000),
         new KeyTypeStringSlot("",      false,    0),

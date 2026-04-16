@@ -214,6 +214,57 @@ public class MouseSlotTests : IDisposable
         sw.ElapsedMilliseconds.Should().BeGreaterThanOrEqualTo(70);
     }
 
+    // ─── PressAndRelease ──────────────────────────────────────────────────
+
+    [Fact]
+    public async Task PlayAsync_MouseButtonSlot_PressAndRelease_SendsPressAtStart()
+    {
+        var slots = Slots(new MouseButtonSlot(MouseButton.Left, KeyAction.PressAndRelease, DurationMs: 50));
+
+        await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
+
+        _mouse.Verify(m => m.SendMouseButton(MouseButton.Left, KeyAction.Press), Times.Once);
+    }
+
+    [Fact]
+    public async Task PlayAsync_MouseButtonSlot_PressAndRelease_SendsReleaseAfterDelay()
+    {
+        var order = new List<KeyAction>();
+        _mouse.Setup(m => m.SendMouseButton(MouseButton.Left, It.IsAny<KeyAction>()))
+              .Callback<MouseButton, KeyAction>((_, a) => order.Add(a));
+
+        var slots = Slots(new MouseButtonSlot(MouseButton.Left, KeyAction.PressAndRelease, DurationMs: 50));
+
+        await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
+
+        order.Should().Equal(KeyAction.Press, KeyAction.Release);
+    }
+
+    [Fact]
+    public async Task PlayAsync_MouseButtonSlot_PressAndRelease_ZeroDuration_SendsBoth()
+    {
+        var slots = Slots(new MouseButtonSlot(MouseButton.Right, KeyAction.PressAndRelease, DurationMs: 0));
+
+        await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
+
+        _mouse.Verify(m => m.SendMouseButton(MouseButton.Right, KeyAction.Press),   Times.Once);
+        _mouse.Verify(m => m.SendMouseButton(MouseButton.Right, KeyAction.Release),  Times.Once);
+    }
+
+    [Fact]
+    public async Task StopAsync_DuringMousePressAndReleaseHold_SendsRelease()
+    {
+        var slots = Slots(new MouseButtonSlot(MouseButton.Left, KeyAction.PressAndRelease, DurationMs: 5000));
+
+        Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
+        await Task.Delay(30); // Press が送信されるのを待つ
+        await _sut.StopAsync();
+        await play;
+
+        _mouse.Verify(m => m.SendMouseButton(MouseButton.Left, KeyAction.Press),   Times.Once);
+        _mouse.Verify(m => m.SendMouseButton(MouseButton.Left, KeyAction.Release),  Times.Once);
+    }
+
     // ─── ヘルパー ─────────────────────────────────────────────────────────
 
     private static IReadOnlyList<SequenceSlot> Slots(params SequenceSlot[] slots) => slots;

@@ -184,8 +184,11 @@
                                     <RadioButton Content="押す" Margin="0,0,16,0"
                                                  IsChecked="{Binding IsKeyActionPress, UpdateSourceTrigger=PropertyChanged}"
                                                  VerticalAlignment="Center" />
-                                    <RadioButton Content="離す"
+                                    <RadioButton Content="離す" Margin="0,0,16,0"
                                                  IsChecked="{Binding IsKeyActionRelease, UpdateSourceTrigger=PropertyChanged}"
+                                                 VerticalAlignment="Center" />
+                                    <RadioButton Content="押して離す"
+                                                 IsChecked="{Binding IsKeyActionPressAndRelease, UpdateSourceTrigger=PropertyChanged}"
                                                  VerticalAlignment="Center" />
                                 </StackPanel>
                                 <!-- キー選択 -->
@@ -238,8 +241,11 @@
                                     <RadioButton Content="押す" Margin="0,0,16,0"
                                                  IsChecked="{Binding IsMouseButtonActionPress, UpdateSourceTrigger=PropertyChanged}"
                                                  VerticalAlignment="Center" />
-                                    <RadioButton Content="離す"
+                                    <RadioButton Content="離す" Margin="0,0,16,0"
                                                  IsChecked="{Binding IsMouseButtonActionRelease, UpdateSourceTrigger=PropertyChanged}"
+                                                 VerticalAlignment="Center" />
+                                    <RadioButton Content="押して離す"
+                                                 IsChecked="{Binding IsMouseButtonActionPressAndRelease, UpdateSourceTrigger=PropertyChanged}"
                                                  VerticalAlignment="Center" />
                                 </StackPanel>
                             </StackPanel>

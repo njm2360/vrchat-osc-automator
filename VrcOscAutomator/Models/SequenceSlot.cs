@@ -70,7 +70,7 @@ public record KeySingleSlot(int VirtualKey, KeyAction Action, int DurationMs = 0
 /// <summary>文字列をキーボード入力として送信するスロット。</summary>
 public record KeyTypeStringSlot(string Text, bool AppendNewline = false, int DurationMs = 0) : SequenceSlot;
 
-public enum KeyAction { Press, Release }
+public enum KeyAction { Press, Release, PressAndRelease }
 
 /// <summary>マウスボタンを PRESS または RELEASE するスロット。</summary>
 public record MouseButtonSlot(MouseButton Button, KeyAction Action, int DurationMs = 0) : SequenceSlot;

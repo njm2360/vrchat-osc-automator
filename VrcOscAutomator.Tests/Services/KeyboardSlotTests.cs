@@ -189,6 +189,57 @@ public class KeyboardSlotTests : IDisposable
         _keyboard.Verify(k => k.SendKey(0x0D, KeyAction.Press), Times.Exactly(3));
     }
 
+    // ─── PressAndRelease ──────────────────────────────────────────────────
+
+    [Fact]
+    public async Task PlayAsync_KeySingleSlot_PressAndRelease_SendsPressAtStart()
+    {
+        var slots = Slots(new KeySingleSlot(0x41, KeyAction.PressAndRelease, DurationMs: 50));
+
+        await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
+
+        _keyboard.Verify(k => k.SendKey(0x41, KeyAction.Press), Times.Once);
+    }
+
+    [Fact]
+    public async Task PlayAsync_KeySingleSlot_PressAndRelease_SendsReleaseAfterDelay()
+    {
+        var order = new List<KeyAction>();
+        _keyboard.Setup(k => k.SendKey(0x41, It.IsAny<KeyAction>()))
+                 .Callback<int, KeyAction>((_, a) => order.Add(a));
+
+        var slots = Slots(new KeySingleSlot(0x41, KeyAction.PressAndRelease, DurationMs: 50));
+
+        await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
+
+        order.Should().Equal(KeyAction.Press, KeyAction.Release);
+    }
+
+    [Fact]
+    public async Task PlayAsync_KeySingleSlot_PressAndRelease_ZeroDuration_SendsBoth()
+    {
+        var slots = Slots(new KeySingleSlot(0x41, KeyAction.PressAndRelease, DurationMs: 0));
+
+        await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
+
+        _keyboard.Verify(k => k.SendKey(0x41, KeyAction.Press),   Times.Once);
+        _keyboard.Verify(k => k.SendKey(0x41, KeyAction.Release),  Times.Once);
+    }
+
+    [Fact]
+    public async Task StopAsync_DuringPressAndReleaseHold_SendsRelease()
+    {
+        var slots = Slots(new KeySingleSlot(0x41, KeyAction.PressAndRelease, DurationMs: 5000));
+
+        Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
+        await Task.Delay(30); // Press が送信されるのを待つ
+        await _sut.StopAsync();
+        await play;
+
+        _keyboard.Verify(k => k.SendKey(0x41, KeyAction.Press),   Times.Once);
+        _keyboard.Verify(k => k.SendKey(0x41, KeyAction.Release),  Times.Once);
+    }
+
     // ─── ヘルパー ─────────────────────────────────────────────────────────
 
     private static IReadOnlyList<SequenceSlot> Slots(params SequenceSlot[] slots) => slots;
