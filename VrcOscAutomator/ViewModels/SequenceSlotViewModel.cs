@@ -58,6 +58,8 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
     [NotifyPropertyChangedFor(nameof(BoolValue))]
+    [NotifyPropertyChangedFor(nameof(IsValueOn))]
+    [NotifyPropertyChangedFor(nameof(IsValueOff))]
     public partial float Value { get; set; }
 
 
@@ -187,6 +189,19 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
     {
         get => Value != 0f;
         set => Value = value ? 1f : 0f;
+    }
+
+    /// <summary>Int プリセットの ON/OFF ラジオボタン用プロパティ。</summary>
+    public bool IsValueOn
+    {
+        get => (int)Value == 1;
+        set { if (value) Value = 1f; }
+    }
+
+    public bool IsValueOff
+    {
+        get => (int)Value == 0;
+        set { if (value) Value = 0f; }
     }
 
     public bool IsValid => SelectedPreset is not CustomPreset || OscAddressRegex().IsMatch(CustomAddress);

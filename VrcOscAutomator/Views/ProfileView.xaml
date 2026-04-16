@@ -62,9 +62,9 @@
                                 <TextBlock Text="値:" Width="36"
                                            VerticalAlignment="Center" Foreground="#444" />
                                 <RadioButton Content="1 (ON)" Margin="0,0,12,0"
-                                             IsChecked="{Binding Value, Converter={StaticResource IntValueToBoolConverter}, ConverterParameter=1}" />
+                                             IsChecked="{Binding IsValueOn, UpdateSourceTrigger=PropertyChanged}" />
                                 <RadioButton Content="0 (OFF)"
-                                             IsChecked="{Binding Value, Converter={StaticResource IntValueToBoolConverter}, ConverterParameter=0}" />
+                                             IsChecked="{Binding IsValueOff, UpdateSourceTrigger=PropertyChanged}" />
                             </StackPanel>
 
                             <!-- カスタム: OSCアドレス + 型選択 + 値 -->
