@@ -90,43 +90,36 @@ public class SequenceSlotViewModelTests
         vm.IsValid.Should().BeFalse();
     }
 
-    // ─── BoolValue ────────────────────────────────────────────────────────
+    // ─── 値プロパティの独立性 ─────────────────────────────────────────────
 
-    [Theory]
-    [InlineData(0f, false)]
-    [InlineData(1f, true)]
-    [InlineData(0.5f, true)]
-    public void BoolValue_Getter_ReflectsValue(float value, bool expected)
+    [Fact]
+    public void ValueProperties_AreIndependent()
     {
-        var vm = new SequenceSlotViewModel { Value = value };
-        vm.BoolValue.Should().Be(expected);
+        var vm = new SequenceSlotViewModel
+        {
+            FloatValue = 0.75f,
+            IntValue = 1,
+            BoolValue = true,
+        };
+
+        vm.FloatValue.Should().Be(0.75f);
+        vm.IntValue.Should().Be(1);
+        vm.BoolValue.Should().BeTrue();
     }
 
     [Fact]
-    public void BoolValue_SetTrue_SetsValueToOne()
+    public void CustomValueType_ChangingType_DoesNotAffectOtherValues()
     {
-        var vm = new SequenceSlotViewModel { BoolValue = true };
-        vm.Value.Should().Be(1f);
-    }
-
-    [Fact]
-    public void BoolValue_SetFalse_SetsValueToZero()
-    {
-        var vm = new SequenceSlotViewModel { BoolValue = false };
-        vm.Value.Should().Be(0f);
-    }
-
-    // ─── CustomValueType 変更 ─────────────────────────────────────────────
-
-    [Fact]
-    public void CustomValueTypeChanged_ResetsValueToZero()
-    {
-        var vm = new SequenceSlotViewModel { SelectedPreset = CustomPreset };
-        vm.Value = 0.75f;
+        var vm = new SequenceSlotViewModel
+        {
+            SelectedPreset = CustomPreset,
+            FloatValue = 0.75f,
+            IntValue = 2,
+        };
 
         vm.CustomValueType = OscValueType.Int;
-
-        vm.Value.Should().Be(0f);
+        vm.FloatValue.Should().Be(0.75f);
+        vm.IntValue.Should().Be(2);
     }
 
     // ─── モードフラグ ─────────────────────────────────────────────────────
@@ -280,21 +273,21 @@ public class SequenceSlotViewModelTests
     [Fact]
     public void ParameterSummary_IntPreset_ValueOne_ShowsOn()
     {
-        var vm = new SequenceSlotViewModel { SelectedPreset = IntPreset, Value = 1f };
+        var vm = new SequenceSlotViewModel { SelectedPreset = IntPreset, IntValue = 1 };
         vm.ParameterSummary.Should().Be("1 (ON)");
     }
 
     [Fact]
     public void ParameterSummary_IntPreset_ValueZero_ShowsOff()
     {
-        var vm = new SequenceSlotViewModel { SelectedPreset = IntPreset, Value = 0f };
+        var vm = new SequenceSlotViewModel { SelectedPreset = IntPreset, IntValue = 0 };
         vm.ParameterSummary.Should().Be("0 (OFF)");
     }
 
     [Fact]
     public void ParameterSummary_FloatPreset_ShowsFormattedValue()
     {
-        var vm = new SequenceSlotViewModel { SelectedPreset = FloatPreset, Value = 0.75f };
+        var vm = new SequenceSlotViewModel { SelectedPreset = FloatPreset, FloatValue = 0.75f };
         vm.ParameterSummary.Should().Be("0.75");
     }
 
@@ -306,39 +299,39 @@ public class SequenceSlotViewModelTests
             SelectedPreset = CustomPreset,
             CustomAddress = "/my/param",
             CustomValueType = OscValueType.Float,
-            Value = 0.5f,
+            FloatValue = 0.5f,
         };
         vm.ParameterSummary.Should().Contain("/my/param").And.Contain("Float");
     }
 
     [Theory]
-    [InlineData(0f, "0")]
-    [InlineData(1f, "1")]
-    [InlineData(2f, "2")]
-    public void ParameterSummary_CustomInt_ShowsNumber_NotOnOff(float value, string expected)
+    [InlineData(0, "0")]
+    [InlineData(1, "1")]
+    [InlineData(2, "2")]
+    public void ParameterSummary_CustomInt_ShowsNumber_NotOnOff(int value, string expected)
     {
         var vm = new SequenceSlotViewModel
         {
             SelectedPreset = CustomPreset,
             CustomAddress = "/my/int",
             CustomValueType = OscValueType.Int,
-            Value = value,
+            IntValue = value,
         };
         vm.ParameterSummary.Should().Contain(expected);
         vm.ParameterSummary.Should().NotContain("ON").And.NotContain("OFF");
     }
 
     [Theory]
-    [InlineData(0f, "false")]
-    [InlineData(1f, "true")]
-    public void ParameterSummary_CustomBool_ShowsTrueOrFalse(float value, string expected)
+    [InlineData(false, "false")]
+    [InlineData(true, "true")]
+    public void ParameterSummary_CustomBool_ShowsTrueOrFalse(bool value, string expected)
     {
         var vm = new SequenceSlotViewModel
         {
             SelectedPreset = CustomPreset,
             CustomAddress = "/my/bool",
             CustomValueType = OscValueType.Bool,
-            Value = value,
+            BoolValue = value,
         };
         vm.ParameterSummary.Should().Contain(expected);
     }
@@ -417,7 +410,7 @@ public class SequenceSlotViewModelTests
         var vm = new SequenceSlotViewModel
         {
             SelectedPreset = FloatPreset,
-            Value = 0.8f,
+            FloatValue = 0.8f,
             DurationMs = 300,
             ResetOnComplete = false,
         };
@@ -459,12 +452,13 @@ public class SequenceSlotViewModelTests
             SelectedPreset = CustomPreset,
             CustomAddress = "/my/int",
             CustomValueType = OscValueType.Int,
-            Value = 1f,
+            IntValue = 1,
         };
 
         SequenceSlot model = vm.ToModel();
 
         model.Should().BeOfType<IntSlot>();
+        ((IntSlot)model).Value.Should().Be(1);
     }
 
     // ─── FromModel ────────────────────────────────────────────────────────
@@ -511,7 +505,7 @@ public class SequenceSlotViewModelTests
 
         vm.SelectedPreset.Should().BeOfType<BuiltinPreset>()
             .Which.Address.Should().Be("/input/Vertical");
-        vm.Value.Should().Be(0.5f);
+        vm.FloatValue.Should().Be(0.5f);
     }
 
     [Fact]
@@ -523,6 +517,7 @@ public class SequenceSlotViewModelTests
         vm.SelectedPreset.IsCustom.Should().BeTrue();
         vm.CustomAddress.Should().Be("/custom/unknown");
         vm.CustomValueType.Should().Be(OscValueType.Int);
+        vm.IntValue.Should().Be(1);
     }
 
     // ─── ToModel / FromModel ラウンドトリップ ─────────────────────────────

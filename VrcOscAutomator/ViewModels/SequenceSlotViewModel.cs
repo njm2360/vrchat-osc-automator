@@ -39,7 +39,6 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsMouseWheelMode))]
     [NotifyPropertyChangedFor(nameof(IsMouseMoveMode))]
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
-    [NotifyPropertyChangedFor(nameof(Value))]
     [NotifyPropertyChangedFor(nameof(IsValid))]
     public partial SlotPreset SelectedPreset { get; set; } = SlotPreset.All[0];
 
@@ -53,14 +52,19 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
     public partial OscValueType CustomValueType { get; set; } = OscValueType.Float;
 
 
-    partial void OnCustomValueTypeChanged(OscValueType value) => Value = 0f;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
+    public partial float FloatValue { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
-    [NotifyPropertyChangedFor(nameof(BoolValue))]
     [NotifyPropertyChangedFor(nameof(IsValueOn))]
     [NotifyPropertyChangedFor(nameof(IsValueOff))]
-    public partial float Value { get; set; }
+    public partial int IntValue { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
+    public partial bool BoolValue { get; set; }
 
 
     [ObservableProperty]
@@ -184,24 +188,17 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
         set { if (value) SelectedMouseMoveMode = MouseMoveMode.Absolute; }
     }
 
-    /// <summary>Bool 型の値を bool として読み書きするビュー用プロパティ。</summary>
-    public bool BoolValue
-    {
-        get => Value != 0f;
-        set => Value = value ? 1f : 0f;
-    }
-
     /// <summary>Int プリセットの ON/OFF ラジオボタン用プロパティ。</summary>
     public bool IsValueOn
     {
-        get => (int)Value == 1;
-        set { if (value) Value = 1f; }
+        get => IntValue == 1;
+        set { if (value) IntValue = 1; }
     }
 
     public bool IsValueOff
     {
-        get => (int)Value == 0;
-        set { if (value) Value = 0f; }
+        get => IntValue == 0;
+        set { if (value) IntValue = 0; }
     }
 
     public bool IsValid => SelectedPreset is not CustomPreset || OscAddressRegex().IsMatch(CustomAddress);
@@ -246,8 +243,8 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
         CustomPreset => CustomAddress.Length > 0
                                ? $"{CustomAddress} [{CustomValueType}] = {ValueSummary}"
                                : $"(アドレス未設定) [{CustomValueType}] = {ValueSummary}",
-        BuiltinPreset { ValueType: OscValueType.Int } => (int)Value == 1 ? "1 (ON)" : "0 (OFF)",
-        _ => $"{Value:F2}",
+        BuiltinPreset { ValueType: OscValueType.Int } => IntValue == 1 ? "1 (ON)" : "0 (OFF)",
+        _ => $"{FloatValue:F2}",
     };
 
     private static string Truncate(string s, int max) => s.Length <= max ? s : s[..max] + "…";
@@ -262,10 +259,10 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
 
     private string ValueSummary => CustomValueType switch
     {
-        OscValueType.Int => $"{(int)Value}",
-        OscValueType.Bool => Value != 0f ? "true" : "false",
+        OscValueType.Int => $"{IntValue}",
+        OscValueType.Bool => BoolValue ? "true" : "false",
         OscValueType.String => $"\"{StringValue}\"",
-        _ => $"{Value:F3}",
+        _ => $"{FloatValue:F3}",
     };
 
     public SequenceSlot ToModel() => SelectedPreset switch
@@ -286,10 +283,10 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
 
     private SequenceSlot OscSlot(string address, OscValueType vt) => vt switch
     {
-        OscValueType.Int => new IntSlot(address, (int)Value, DurationMs, ResetOnComplete),
-        OscValueType.Bool => new BoolSlot(address, Value != 0f, DurationMs, ResetOnComplete),
+        OscValueType.Int => new IntSlot(address, IntValue, DurationMs, ResetOnComplete),
+        OscValueType.Bool => new BoolSlot(address, BoolValue, DurationMs, ResetOnComplete),
         OscValueType.String => new StringSlot(address, StringValue, DurationMs, ResetOnComplete),
-        _ => new FloatSlot(address, Value, DurationMs, ResetOnComplete),
+        _ => new FloatSlot(address, FloatValue, DurationMs, ResetOnComplete),
     };
 
     public static SequenceSlotViewModel FromModel(SequenceSlot slot) => slot switch
@@ -333,23 +330,26 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
             SelectedMouseMoveMode = mm.Mode,
             DurationMs = mm.DurationMs,
         },
-        FloatSlot f => BuildOscVm(f.Address, OscValueType.Float, f.Value, null, f.DurationMs, f.ResetOnComplete),
-        IntSlot n => BuildOscVm(n.Address, OscValueType.Int, n.Value, null, n.DurationMs, n.ResetOnComplete),
-        BoolSlot b => BuildOscVm(b.Address, OscValueType.Bool, b.Value ? 1f : 0f, null, b.DurationMs, b.ResetOnComplete),
-        StringSlot s => BuildOscVm(s.Address, OscValueType.String, 0f, s.Value, s.DurationMs, s.ResetOnComplete),
+        FloatSlot f => BuildOscVm(f.Address, OscValueType.Float, floatVal: f.Value, durationMs: f.DurationMs, resetOnComplete: f.ResetOnComplete),
+        IntSlot n => BuildOscVm(n.Address, OscValueType.Int, intVal: n.Value, durationMs: n.DurationMs, resetOnComplete: n.ResetOnComplete),
+        BoolSlot b => BuildOscVm(b.Address, OscValueType.Bool, boolVal: b.Value, durationMs: b.DurationMs, resetOnComplete: b.ResetOnComplete),
+        StringSlot s => BuildOscVm(s.Address, OscValueType.String, strVal: s.Value, durationMs: s.DurationMs, resetOnComplete: s.ResetOnComplete),
         _ => throw new ArgumentOutOfRangeException(nameof(slot)),
     };
 
     private static SequenceSlotViewModel BuildOscVm(
-        string address, OscValueType vt, float floatVal,
-        string? strVal, int durationMs, bool resetOnComplete)
+        string address, OscValueType vt,
+        float floatVal = 0f, int intVal = 0, bool boolVal = false,
+        string? strVal = null, int durationMs = 500, bool resetOnComplete = true)
     {
         SlotPreset preset = SlotPreset.All.FirstOrDefault(p => p is BuiltinPreset bp && bp.Address == address)
                          ?? SlotPreset.All.First(p => p is CustomPreset);
         return new()
         {
             SelectedPreset = preset,
-            Value = floatVal,
+            FloatValue = floatVal,
+            IntValue = intVal,
+            BoolValue = boolVal,
             StringValue = preset is CustomPreset ? (strVal ?? string.Empty) : string.Empty,
             CustomValueType = preset is CustomPreset ? vt : OscValueType.Float,
             CustomAddress = preset is CustomPreset ? address : string.Empty,

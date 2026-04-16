@@ -49,9 +49,9 @@
                                            Foreground="#444" />
                                 <Slider Width="220" Minimum="-1.0" Maximum="1.0"
                                         SmallChange="0.05" LargeChange="0.1"
-                                        Value="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                        Value="{Binding FloatValue, UpdateSourceTrigger=PropertyChanged}"
                                         VerticalAlignment="Center" Margin="0,0,10,0" />
-                                <TextBlock Text="{Binding Value, StringFormat=F2}"
+                                <TextBlock Text="{Binding FloatValue, StringFormat=F2}"
                                            Width="40" VerticalAlignment="Center"
                                            FontWeight="SemiBold" />
                             </StackPanel>
@@ -103,7 +103,7 @@
                                     <TextBlock Grid.Column="0" Text="値:"
                                                VerticalAlignment="Center" Foreground="#444" />
                                     <TextBox Grid.Column="1"
-                                             Text="{Binding Value, UpdateSourceTrigger=LostFocus}"
+                                             Text="{Binding FloatValue, UpdateSourceTrigger=LostFocus}"
                                              VerticalAlignment="Center"
                                              b:NumericTextBoxBehavior.RefreshOnLostFocus="True"
                                              b:NumericTextBoxBehavior.AllowDecimal="True" />
@@ -118,7 +118,7 @@
                                     <TextBlock Grid.Column="0" Text="値:"
                                                VerticalAlignment="Center" Foreground="#444" />
                                     <TextBox Grid.Column="1"
-                                             Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                             Text="{Binding IntValue, UpdateSourceTrigger=PropertyChanged}"
                                              VerticalAlignment="Center"
                                              b:NumericTextBoxBehavior.RefreshOnLostFocus="True" />
                                 </Grid>
@@ -169,6 +169,11 @@
                             <TextBlock Text="(パラメータなし)"
                                        Foreground="#888" FontStyle="Italic"
                                        Visibility="{Binding SelectedPreset.IsLoopEnd, Converter={StaticResource BoolToVis}}" />
+
+                            <!-- ブレークポイント: パラメータなし -->
+                            <TextBlock Text="(パラメータなし)"
+                                       Foreground="#888" FontStyle="Italic"
+                                       Visibility="{Binding SelectedPreset.IsBreakpoint, Converter={StaticResource BoolToVis}}" />
 
                             <!-- キー送信(単押し) -->
                             <StackPanel Visibility="{Binding SelectedPreset.IsKeyboardSingle, Converter={StaticResource BoolToVis}}">
