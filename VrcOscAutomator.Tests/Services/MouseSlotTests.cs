@@ -10,9 +10,9 @@ namespace VrcOscAutomator.Tests.Services;
 /// <summary>SequencePlayerService のマウススロット実行に関するテスト。</summary>
 public class MouseSlotTests : IDisposable
 {
-    private readonly Mock<IOscSender>      _osc      = new(MockBehavior.Loose);
+    private readonly Mock<IOscSender> _osc = new(MockBehavior.Loose);
     private readonly Mock<IKeyboardSender> _keyboard = new(MockBehavior.Loose);
-    private readonly Mock<IMouseSender>    _mouse    = new(MockBehavior.Loose);
+    private readonly Mock<IMouseSender> _mouse = new(MockBehavior.Loose);
     private readonly SequencePlayerService _sut;
 
     public MouseSlotTests()
@@ -62,7 +62,7 @@ public class MouseSlotTests : IDisposable
         await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
 
         _osc.Verify(o => o.SendFloat(It.IsAny<string>(), It.IsAny<float>()), Times.Never);
-        _osc.Verify(o => o.SendInt(It.IsAny<string>(),   It.IsAny<int>()),   Times.Never);
+        _osc.Verify(o => o.SendInt(It.IsAny<string>(), It.IsAny<int>()), Times.Never);
         _keyboard.Verify(k => k.SendKey(It.IsAny<int>(), It.IsAny<KeyAction>()), Times.Never);
     }
 
@@ -70,14 +70,14 @@ public class MouseSlotTests : IDisposable
     public async Task PlayAsync_MouseButtonSlot_PressRelease_BothExecuted()
     {
         var slots = Slots(
-            new MouseButtonSlot(MouseButton.Left, KeyAction.Press,   10),
-            new MouseButtonSlot(MouseButton.Left, KeyAction.Release,  5)
+            new MouseButtonSlot(MouseButton.Left, KeyAction.Press, 10),
+            new MouseButtonSlot(MouseButton.Left, KeyAction.Release, 5)
         );
 
         await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
 
-        _mouse.Verify(m => m.SendMouseButton(MouseButton.Left, KeyAction.Press),   Times.Once);
-        _mouse.Verify(m => m.SendMouseButton(MouseButton.Left, KeyAction.Release),  Times.Once);
+        _mouse.Verify(m => m.SendMouseButton(MouseButton.Left, KeyAction.Press), Times.Once);
+        _mouse.Verify(m => m.SendMouseButton(MouseButton.Left, KeyAction.Release), Times.Once);
     }
 
     // ─── MouseWheelSlot ──────────────────────────────────────────────────
@@ -174,8 +174,8 @@ public class MouseSlotTests : IDisposable
 
         await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
 
-        _osc.Verify(o => o.SendInt("/input/Jump", 1),               Times.Once);
-        _keyboard.Verify(k => k.SendKey(0x20, KeyAction.Press),     Times.Once);
+        _osc.Verify(o => o.SendInt("/input/Jump", 1), Times.Once);
+        _keyboard.Verify(k => k.SendKey(0x20, KeyAction.Press), Times.Once);
         _mouse.Verify(m => m.SendMouseButton(MouseButton.Left, KeyAction.Press), Times.Once);
     }
 
@@ -209,9 +209,75 @@ public class MouseSlotTests : IDisposable
         await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
         sw.Stop();
 
-        _mouse.Verify(m => m.SendMouseButton(MouseButton.Left, KeyAction.Press),   Times.Once);
-        _mouse.Verify(m => m.SendMouseButton(MouseButton.Left, KeyAction.Release),  Times.Once);
+        _mouse.Verify(m => m.SendMouseButton(MouseButton.Left, KeyAction.Press), Times.Once);
+        _mouse.Verify(m => m.SendMouseButton(MouseButton.Left, KeyAction.Release), Times.Once);
         sw.ElapsedMilliseconds.Should().BeGreaterThanOrEqualTo(70);
+    }
+
+    // ─── 暴走防止: 停止・一時停止でボタン解放 ────────────────────────────
+
+    [Fact]
+    public async Task StopAsync_WhileMouseButtonIsHeld_ReleasesButton()
+    {
+        var slots = Slots(
+            new MouseButtonSlot(MouseButton.Left, KeyAction.Press, 0),
+            new WaitSlot(5000),
+            new MouseButtonSlot(MouseButton.Left, KeyAction.Release, 0)
+        );
+
+        Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
+        await Task.Delay(30);
+        await _sut.StopAsync();
+        await play;
+
+        _mouse.Verify(m => m.SendMouseButton(MouseButton.Left, KeyAction.Press), Times.Once);
+        _mouse.Verify(m => m.SendMouseButton(MouseButton.Left, KeyAction.Release), Times.AtLeastOnce);
+    }
+
+    [Fact]
+    public async Task PauseAsync_WhileMouseButtonIsHeld_ReleasesButton()
+    {
+        var slots = Slots(
+            new MouseButtonSlot(MouseButton.Left, KeyAction.Press, 0),
+            new WaitSlot(5000),
+            new MouseButtonSlot(MouseButton.Left, KeyAction.Release, 0)
+        );
+
+        Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
+        await Task.Delay(30);
+        await _sut.PauseAsync();
+        await Task.Delay(20);
+
+        _mouse.Verify(m => m.SendMouseButton(MouseButton.Left, KeyAction.Release), Times.AtLeastOnce);
+
+        await _sut.StopAsync();
+        await play;
+    }
+
+    [Fact]
+    public async Task ResumeAsync_AfterPauseWithHeldButton_RepressesButton()
+    {
+        var slots = Slots(
+            new MouseButtonSlot(MouseButton.Left, KeyAction.Press, 0),
+            new WaitSlot(5000),
+            new MouseButtonSlot(MouseButton.Left, KeyAction.Release, 0)
+        );
+
+        Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
+        await Task.Delay(30);
+        await _sut.PauseAsync();
+        await Task.Delay(20);
+
+        _mouse.Verify(m => m.SendMouseButton(MouseButton.Left, KeyAction.Release), Times.AtLeastOnce);
+
+        await _sut.ResumeAsync();
+        await Task.Delay(20);
+
+        // Resume 後に Press が再送されること（初回 + 再押下 = 2 回以上）
+        _mouse.Verify(m => m.SendMouseButton(MouseButton.Left, KeyAction.Press), Times.AtLeast(2));
+
+        await _sut.StopAsync();
+        await play;
     }
 
     // ─── PressAndRelease ──────────────────────────────────────────────────
@@ -247,8 +313,8 @@ public class MouseSlotTests : IDisposable
 
         await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
 
-        _mouse.Verify(m => m.SendMouseButton(MouseButton.Right, KeyAction.Press),   Times.Once);
-        _mouse.Verify(m => m.SendMouseButton(MouseButton.Right, KeyAction.Release),  Times.Once);
+        _mouse.Verify(m => m.SendMouseButton(MouseButton.Right, KeyAction.Press), Times.Once);
+        _mouse.Verify(m => m.SendMouseButton(MouseButton.Right, KeyAction.Release), Times.Once);
     }
 
     [Fact]
@@ -261,8 +327,8 @@ public class MouseSlotTests : IDisposable
         await _sut.StopAsync();
         await play;
 
-        _mouse.Verify(m => m.SendMouseButton(MouseButton.Left, KeyAction.Press),   Times.Once);
-        _mouse.Verify(m => m.SendMouseButton(MouseButton.Left, KeyAction.Release),  Times.Once);
+        _mouse.Verify(m => m.SendMouseButton(MouseButton.Left, KeyAction.Press), Times.Once);
+        _mouse.Verify(m => m.SendMouseButton(MouseButton.Left, KeyAction.Release), Times.Once);
     }
 
     // ─── ヘルパー ─────────────────────────────────────────────────────────

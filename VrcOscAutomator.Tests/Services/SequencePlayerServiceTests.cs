@@ -9,9 +9,9 @@ namespace VrcOscAutomator.Tests.Services;
 
 public class SequencePlayerServiceTests : IDisposable
 {
-    private readonly Mock<IOscSender>      _sender   = new(MockBehavior.Loose);
+    private readonly Mock<IOscSender> _sender = new(MockBehavior.Loose);
     private readonly Mock<IKeyboardSender> _keyboard = new(MockBehavior.Loose);
-    private readonly Mock<IMouseSender>    _mouse    = new(MockBehavior.Loose);
+    private readonly Mock<IMouseSender> _mouse = new(MockBehavior.Loose);
     private readonly SequencePlayerService _sut;
 
     public SequencePlayerServiceTests()
@@ -123,9 +123,9 @@ public class SequencePlayerServiceTests : IDisposable
     {
         var slots = Slots(
             new FloatSlot("/param/float", 0.8f, 10, false),
-            new IntSlot("/param/int",     1,    10, false),
-            new BoolSlot("/param/bool",   true, 10, false),
-            new StringSlot("/param/str",  "hi", 10, false)
+            new IntSlot("/param/int", 1, 10, false),
+            new BoolSlot("/param/bool", true, 10, false),
+            new StringSlot("/param/str", "hi", 10, false)
         );
 
         await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
@@ -211,7 +211,7 @@ public class SequencePlayerServiceTests : IDisposable
     public async Task PlayAsync_ReportsSlotIndexThenMinusOne()
     {
         var slots = Slots(
-            new IntSlot("/input/Jump",  1, 5, false),
+            new IntSlot("/input/Jump", 1, 5, false),
             new IntSlot("/input/Voice", 1, 5, false)
         );
         var reported = new List<int>();
@@ -253,8 +253,9 @@ public class SequencePlayerServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task StopAsync_ResetOnComplete_False_DoesNotSendReset()
+    public async Task StopAsync_ResetOnComplete_False_StillSendsReset()
     {
+        // 停止時は ResetOnComplete の設定にかかわらずリセットする（暴走防止）
         var slots = Slots(new FloatSlot("/input/Vertical", 1f, 5000, false));
 
         Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
@@ -262,7 +263,7 @@ public class SequencePlayerServiceTests : IDisposable
         await _sut.StopAsync();
         await play;
 
-        _sender.Verify(s => s.SendFloat("/input/Vertical", 0f), Times.Never);
+        _sender.Verify(s => s.SendFloat("/input/Vertical", 0f), Times.Once);
     }
 
     [Fact]
@@ -312,17 +313,24 @@ public class SequencePlayerServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task PauseAsync_ResetOnComplete_False_DoesNotSendReset()
+    public async Task PauseAsync_ResetOnComplete_False_ResetsOnPause()
     {
+        // ResetOnComplete にかかわらず一時停止時にリセットする（暴走防止）
         var slots = Slots(new IntSlot("/input/Jump", 1, 5000, false));
 
         Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
         await Task.Delay(30);
         await _sut.PauseAsync();
+        await Task.Delay(20); // Pause が反映されるのを待つ
+
+        // 一時停止時点でリセット済み
+        _sender.Verify(s => s.SendInt("/input/Jump", 0), Times.Once);
+
         await _sut.StopAsync();
         await play;
 
-        _sender.Verify(s => s.SendInt("/input/Jump", 0), Times.Never);
+        // Stop 後も追加リセットは発生しない（Pause 時に _activeSlot が null 化済み）
+        _sender.Verify(s => s.SendInt("/input/Jump", 0), Times.Once);
     }
 
     [Fact]
@@ -347,8 +355,8 @@ public class SequencePlayerServiceTests : IDisposable
     {
         // Pause → Resume 後、次のスロットに進まず同じスロットに留まること
         var slots = Slots(
-            new IntSlot("/slot/first",  1, 400, false),
-            new IntSlot("/slot/second", 1,  10, false)
+            new IntSlot("/slot/first", 1, 400, false),
+            new IntSlot("/slot/second", 1, 10, false)
         );
 
         Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
@@ -362,7 +370,7 @@ public class SequencePlayerServiceTests : IDisposable
         await play;
 
         // Resume 後: first の再送 (初回 + 再送 = 2回) → second が 1回
-        _sender.Verify(s => s.SendInt("/slot/first",  1), Times.Exactly(2));
+        _sender.Verify(s => s.SendInt("/slot/first", 1), Times.Exactly(2));
         _sender.Verify(s => s.SendInt("/slot/second", 1), Times.Once);
     }
 

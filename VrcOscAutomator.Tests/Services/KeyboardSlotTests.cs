@@ -10,9 +10,9 @@ namespace VrcOscAutomator.Tests.Services;
 /// <summary>SequencePlayerService のキーボードスロット実行に関するテスト。</summary>
 public class KeyboardSlotTests : IDisposable
 {
-    private readonly Mock<IOscSender>      _osc      = new(MockBehavior.Loose);
+    private readonly Mock<IOscSender> _osc = new(MockBehavior.Loose);
     private readonly Mock<IKeyboardSender> _keyboard = new(MockBehavior.Loose);
-    private readonly Mock<IMouseSender>    _mouse    = new(MockBehavior.Loose);
+    private readonly Mock<IMouseSender> _mouse = new(MockBehavior.Loose);
     private readonly SequencePlayerService _sut;
 
     public KeyboardSlotTests()
@@ -48,14 +48,14 @@ public class KeyboardSlotTests : IDisposable
     public async Task PlayAsync_MultipleKeySlots_EachCalledOnce()
     {
         var slots = Slots(
-            new KeySingleSlot(0x41, KeyAction.Press,   10),
-            new KeySingleSlot(0x41, KeyAction.Release,  5)
+            new KeySingleSlot(0x41, KeyAction.Press, 10),
+            new KeySingleSlot(0x41, KeyAction.Release, 5)
         );
 
         await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
 
-        _keyboard.Verify(k => k.SendKey(0x41, KeyAction.Press),   Times.Once);
-        _keyboard.Verify(k => k.SendKey(0x41, KeyAction.Release),  Times.Once);
+        _keyboard.Verify(k => k.SendKey(0x41, KeyAction.Press), Times.Once);
+        _keyboard.Verify(k => k.SendKey(0x41, KeyAction.Release), Times.Once);
     }
 
     [Fact]
@@ -66,8 +66,8 @@ public class KeyboardSlotTests : IDisposable
         await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
 
         _osc.Verify(o => o.SendFloat(It.IsAny<string>(), It.IsAny<float>()), Times.Never);
-        _osc.Verify(o => o.SendInt(It.IsAny<string>(),   It.IsAny<int>()),   Times.Never);
-        _osc.Verify(o => o.SendBool(It.IsAny<string>(),  It.IsAny<bool>()), Times.Never);
+        _osc.Verify(o => o.SendInt(It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+        _osc.Verify(o => o.SendBool(It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
     }
 
     // ─── KeyTypeStringSlot ────────────────────────────────────────────────
@@ -95,7 +95,7 @@ public class KeyboardSlotTests : IDisposable
         await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
         sw.Stop();
 
-        _keyboard.Verify(k => k.TypeString("hi"),             Times.Once);
+        _keyboard.Verify(k => k.TypeString("hi"), Times.Once);
         _keyboard.Verify(k => k.SendKey(0x0D, KeyAction.Press), Times.Once);
         sw.ElapsedMilliseconds.Should().BeGreaterThanOrEqualTo(70); // 80ms 待機のゆとり確認
     }
@@ -139,7 +139,7 @@ public class KeyboardSlotTests : IDisposable
         await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
 
         _osc.Verify(o => o.SendFloat(It.IsAny<string>(), It.IsAny<float>()), Times.Never);
-        _osc.Verify(o => o.SendInt(It.IsAny<string>(),   It.IsAny<int>()),   Times.Never);
+        _osc.Verify(o => o.SendInt(It.IsAny<string>(), It.IsAny<int>()), Times.Never);
     }
 
     // ─── キャンセル / 停止 ────────────────────────────────────────────────
@@ -189,6 +189,74 @@ public class KeyboardSlotTests : IDisposable
         _keyboard.Verify(k => k.SendKey(0x0D, KeyAction.Press), Times.Exactly(3));
     }
 
+    // ─── 暴走防止: 停止・一時停止でキー解放 ──────────────────────────────
+
+    [Fact]
+    public async Task StopAsync_WhileKeyIsHeld_ReleasesKey()
+    {
+        // Press → Wait(長い) → Release の途中で Stop → Press 済みキーが解放されること
+        var slots = Slots(
+            new KeySingleSlot(0x41, KeyAction.Press, 0),
+            new WaitSlot(5000),
+            new KeySingleSlot(0x41, KeyAction.Release, 0)
+        );
+
+        Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
+        await Task.Delay(30);
+        await _sut.StopAsync();
+        await play;
+
+        _keyboard.Verify(k => k.SendKey(0x41, KeyAction.Press), Times.Once);
+        _keyboard.Verify(k => k.SendKey(0x41, KeyAction.Release), Times.AtLeastOnce);
+    }
+
+    [Fact]
+    public async Task PauseAsync_WhileKeyIsHeld_ReleasesKey()
+    {
+        var slots = Slots(
+            new KeySingleSlot(0x41, KeyAction.Press, 0),
+            new WaitSlot(5000),
+            new KeySingleSlot(0x41, KeyAction.Release, 0)
+        );
+
+        Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
+        await Task.Delay(30);
+        await _sut.PauseAsync();
+        await Task.Delay(20); // Pause が反映されるのを待つ
+
+        _keyboard.Verify(k => k.SendKey(0x41, KeyAction.Release), Times.AtLeastOnce);
+
+        await _sut.StopAsync();
+        await play;
+    }
+
+    [Fact]
+    public async Task ResumeAsync_AfterPauseWithHeldKey_RepressesKey()
+    {
+        var slots = Slots(
+            new KeySingleSlot(0x41, KeyAction.Press, 0),
+            new WaitSlot(5000),
+            new KeySingleSlot(0x41, KeyAction.Release, 0)
+        );
+
+        Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
+        await Task.Delay(30);
+        await _sut.PauseAsync();
+        await Task.Delay(20);
+
+        // Pause 時点で Release が 1 回送られていること
+        _keyboard.Verify(k => k.SendKey(0x41, KeyAction.Release), Times.AtLeastOnce);
+
+        await _sut.ResumeAsync();
+        await Task.Delay(20); // Resume 後の再押下が反映されるのを待つ
+
+        // Resume 後に Press が再送されること（初回 + 再押下 = 2 回以上）
+        _keyboard.Verify(k => k.SendKey(0x41, KeyAction.Press), Times.AtLeast(2));
+
+        await _sut.StopAsync();
+        await play;
+    }
+
     // ─── PressAndRelease ──────────────────────────────────────────────────
 
     [Fact]
@@ -222,8 +290,8 @@ public class KeyboardSlotTests : IDisposable
 
         await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
 
-        _keyboard.Verify(k => k.SendKey(0x41, KeyAction.Press),   Times.Once);
-        _keyboard.Verify(k => k.SendKey(0x41, KeyAction.Release),  Times.Once);
+        _keyboard.Verify(k => k.SendKey(0x41, KeyAction.Press), Times.Once);
+        _keyboard.Verify(k => k.SendKey(0x41, KeyAction.Release), Times.Once);
     }
 
     [Fact]
@@ -236,8 +304,8 @@ public class KeyboardSlotTests : IDisposable
         await _sut.StopAsync();
         await play;
 
-        _keyboard.Verify(k => k.SendKey(0x41, KeyAction.Press),   Times.Once);
-        _keyboard.Verify(k => k.SendKey(0x41, KeyAction.Release),  Times.Once);
+        _keyboard.Verify(k => k.SendKey(0x41, KeyAction.Press), Times.Once);
+        _keyboard.Verify(k => k.SendKey(0x41, KeyAction.Release), Times.Once);
     }
 
     // ─── ヘルパー ─────────────────────────────────────────────────────────
