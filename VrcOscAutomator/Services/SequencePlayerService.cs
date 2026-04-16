@@ -79,6 +79,17 @@ public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender 
                         continue;
                     }
 
+                    // ── ブレークポイント ──────────────────────────────
+                    if (slot is BreakpointSlot)
+                    {
+                        CurrentSlotIndex = i;
+                        slotProgress?.Report(i);
+                        IsPaused = true;
+                        await _resumeSignal.WaitAsync(stopCt);
+                        i++;
+                        continue;
+                    }
+
                     // ── 通常スロット（WaitSlot / OscSlot）──────────────
                     CurrentSlotIndex = i;
                     slotProgress?.Report(i);

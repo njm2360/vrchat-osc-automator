@@ -15,6 +15,7 @@ public class SequenceSlotViewModelTests
     private static SlotPreset WaitPreset => SlotPreset.All.First(p => p.IsWait);
     private static SlotPreset LoopBeginPreset => SlotPreset.All.First(p => p.IsLoopBegin);
     private static SlotPreset LoopEndPreset => SlotPreset.All.First(p => p.IsLoopEnd);
+    private static SlotPreset BreakpointPreset => SlotPreset.All.First(p => p.IsBreakpoint);
 
     // ─── IsValid ──────────────────────────────────────────────────────────
 
@@ -239,6 +240,13 @@ public class SequenceSlotViewModelTests
         SlotPreset.All.First(p => p.IsLoopEnd),
     };
 
+    [Fact]
+    public void IsDurationEditable_Breakpoint_False()
+    {
+        var vm = new SequenceSlotViewModel { SelectedPreset = BreakpointPreset };
+        vm.IsDurationEditable.Should().BeFalse();
+    }
+
     // ─── ParameterSummary ────────────────────────────────────────────────
 
     [Fact]
@@ -259,6 +267,13 @@ public class SequenceSlotViewModelTests
     public void ParameterSummary_Wait_ShowsDash()
     {
         var vm = new SequenceSlotViewModel { SelectedPreset = WaitPreset };
+        vm.ParameterSummary.Should().Be("—");
+    }
+
+    [Fact]
+    public void ParameterSummary_Breakpoint_ShowsPauseIcon()
+    {
+        var vm = new SequenceSlotViewModel { SelectedPreset = BreakpointPreset };
         vm.ParameterSummary.Should().Be("—");
     }
 
@@ -376,6 +391,16 @@ public class SequenceSlotViewModelTests
     }
 
     [Fact]
+    public void ToModel_BreakpointPreset_ReturnsBreakpointSlot()
+    {
+        var vm = new SequenceSlotViewModel { SelectedPreset = BreakpointPreset };
+
+        SequenceSlot model = vm.ToModel();
+
+        model.Should().BeOfType<BreakpointSlot>();
+    }
+
+    [Fact]
     public void ToModel_WaitPreset_ReturnsWaitSlot()
     {
         var vm = new SequenceSlotViewModel { SelectedPreset = WaitPreset, DurationMs = 800 };
@@ -459,6 +484,14 @@ public class SequenceSlotViewModelTests
         SequenceSlotViewModel vm = SequenceSlotViewModel.FromModel(new LoopEndSlot());
 
         vm.SelectedPreset.IsLoopEnd.Should().BeTrue();
+    }
+
+    [Fact]
+    public void FromModel_BreakpointSlot_SelectsBreakpointPreset()
+    {
+        SequenceSlotViewModel vm = SequenceSlotViewModel.FromModel(new BreakpointSlot());
+
+        vm.SelectedPreset.IsBreakpoint.Should().BeTrue();
     }
 
     [Fact]

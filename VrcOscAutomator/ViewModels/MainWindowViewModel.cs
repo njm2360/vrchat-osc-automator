@@ -130,6 +130,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         ProfileViewModel profile = Profiles[SelectedProfileIndex];
         for (int i = 0; i < profile.Slots.Count; i++)
             profile.Slots[i].IsCurrentSlot = (i == index);
+        IsPaused = _player.IsPaused;
     }
 
     [RelayCommand]

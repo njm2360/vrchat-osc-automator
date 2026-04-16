@@ -15,6 +15,7 @@ namespace VrcOscAutomator.Models;
 [JsonDerivedType(typeof(MouseButtonSlot), "mouse_button")]
 [JsonDerivedType(typeof(MouseWheelSlot), "mouse_wheel")]
 [JsonDerivedType(typeof(MouseMoveSlot), "mouse_move")]
+[JsonDerivedType(typeof(BreakpointSlot), "breakpoint")]
 public abstract record SequenceSlot;
 
 /// <summary>OSC を送信する基底スロット。</summary>
@@ -59,6 +60,9 @@ public record LoopBeginSlot(int RepeatCount = 2) : SequenceSlot;
 
 /// <summary>繰り返しブロックの終了マーカー。</summary>
 public record LoopEndSlot() : SequenceSlot;
+
+/// <summary>シーケンスを即座に一時停止するブレークポイント。</summary>
+public record BreakpointSlot() : SequenceSlot;
 
 /// <summary>単一キーを PRESS または RELEASE するスロット。</summary>
 public record KeySingleSlot(int VirtualKey, KeyAction Action, int DurationMs = 0) : SequenceSlot;

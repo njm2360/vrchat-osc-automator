@@ -184,7 +184,7 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
 
     public bool ShowResetOption => SelectedPreset is BuiltinPreset;
 
-    public bool IsDurationEditable => SelectedPreset is not (LoopBeginPreset or LoopEndPreset);
+    public bool IsDurationEditable => SelectedPreset is not (LoopBeginPreset or LoopEndPreset or BreakpointPreset);
 
     public bool IsKeyboardSingleMode => SelectedPreset is KeySinglePreset;
     public bool IsKeyboardTypeStringMode => SelectedPreset is KeyTypeStringPreset;
@@ -209,6 +209,7 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
         LoopBeginPreset => RepeatCount == 0 ? "エンドレス" : $"x {RepeatCount} 回",
         LoopEndPreset => "—",
         WaitPreset => "—",
+        BreakpointPreset => "—",
         KeySinglePreset => $"{SelectedKey.Name} [{(SelectedKeyAction == KeyAction.Press ? "押す" : "離す")}]",
         KeyTypeStringPreset => TypeText.Length == 0
             ? "(未入力)"
@@ -248,6 +249,7 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
         LoopBeginPreset => new LoopBeginSlot(RepeatCount),
         LoopEndPreset => new LoopEndSlot(),
         WaitPreset => new WaitSlot(DurationMs),
+        BreakpointPreset => new BreakpointSlot(),
         KeySinglePreset => new KeySingleSlot(SelectedKey.Code, SelectedKeyAction, DurationMs),
         KeyTypeStringPreset => new KeyTypeStringSlot(TypeText, AppendNewline, DurationMs),
         MouseButtonPreset => new MouseButtonSlot(SelectedMouseButton, SelectedMouseButtonAction, DurationMs),
@@ -271,6 +273,7 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
         LoopBeginSlot lb => new() { SelectedPreset = SlotPreset.All.OfType<LoopBeginPreset>().First(), RepeatCount = lb.RepeatCount },
         LoopEndSlot => new() { SelectedPreset = SlotPreset.All.OfType<LoopEndPreset>().First() },
         WaitSlot w => new() { SelectedPreset = SlotPreset.All.OfType<WaitPreset>().First(), DurationMs = w.DurationMs },
+        BreakpointSlot => new() { SelectedPreset = SlotPreset.All.OfType<BreakpointPreset>().First() },
         KeySingleSlot ks => new()
         {
             SelectedPreset = SlotPreset.All.OfType<KeySinglePreset>().First(),

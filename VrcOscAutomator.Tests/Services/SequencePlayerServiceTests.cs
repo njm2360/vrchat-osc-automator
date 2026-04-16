@@ -427,6 +427,44 @@ public class SequencePlayerServiceTests : IDisposable
         sw.ElapsedMilliseconds.Should().BeLessThan(450);
     }
 
+    // ─── BreakpointSlot ──────────────────────────────────────────────────
+
+    [Fact]
+    public async Task PlayAsync_BreakpointSlot_PausesExecution()
+    {
+        var slots = Slots(new BreakpointSlot());
+
+        Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
+        await Task.Delay(50); // ブレークポイントに到達するのを待つ
+
+        _sut.IsPaused.Should().BeTrue();
+
+        await _sut.StopAsync();
+        await play;
+    }
+
+    [Fact]
+    public async Task PlayAsync_BreakpointSlot_ResumeContinuesAfterBreakpoint()
+    {
+        // [Breakpoint] [Jump=1] → Resume 後に Jump が実行されること
+        var slots = Slots(
+            new BreakpointSlot(),
+            new IntSlot("/input/Jump", 1, 5, false)
+        );
+
+        Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
+        await Task.Delay(50); // ブレークポイントに到達するのを待つ
+
+        // ブレークポイントで停止中は次のスロットが実行されていないこと
+        _sender.Verify(s => s.SendInt("/input/Jump", 1), Times.Never);
+
+        await _sut.ResumeAsync();
+        await play;
+
+        // Resume 後に次のスロットが実行されること
+        _sender.Verify(s => s.SendInt("/input/Jump", 1), Times.Once);
+    }
+
     // ─── IsPlaying ───────────────────────────────────────────────────────
 
     [Fact]

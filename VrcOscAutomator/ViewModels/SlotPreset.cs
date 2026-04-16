@@ -13,6 +13,7 @@ public abstract record SlotPreset(string Name)
     public bool IsLoopBegin => this is LoopBeginPreset;
     public bool IsLoopEnd => this is LoopEndPreset;
     public bool IsLoopMarker => this is LoopBeginPreset or LoopEndPreset;
+    public bool IsBreakpoint => this is BreakpointPreset;
     public bool IsKeyboardSingle => this is KeySinglePreset;
     public bool IsKeyboardTypeString => this is KeyTypeStringPreset;
     public bool IsMouseButton => this is MouseButtonPreset;
@@ -26,6 +27,7 @@ public abstract record SlotPreset(string Name)
         new WaitPreset("待機"),
         new LoopBeginPreset("繰り返し開始"),
         new LoopEndPreset("繰り返し終了"),
+        new BreakpointPreset("ブレークポイント"),
 
         // Float (-1.0 〜 +1.0)
         new BuiltinPreset("前後(軸)",             "/input/Vertical",              OscValueType.Float),
@@ -79,6 +81,8 @@ public abstract record SlotPreset(string Name)
 }
 
 public sealed record WaitPreset(string Name) : SlotPreset(Name);
+
+public sealed record BreakpointPreset(string Name) : SlotPreset(Name);
 
 public sealed record LoopBeginPreset(string Name) : SlotPreset(Name);
 
