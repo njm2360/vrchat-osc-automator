@@ -9,31 +9,38 @@
 
     <DockPanel Margin="12">
 
-        <TextBlock DockPanel.Dock="Top"
-                   Text="エクスポートした文字列を貼り付けてください。"
-                   TextWrapping="Wrap"
-                   Margin="0,0,0,8" />
-
-        <DockPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
-            <Button DockPanel.Dock="Right"
-                    Content="キャンセル"
-                    Width="80"
-                    IsCancel="True"
-                    Click="CancelButton_Click" />
-            <Button DockPanel.Dock="Right"
-                    Content="インポート"
+        <StackPanel DockPanel.Dock="Bottom"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Margin="0,8,0,0">
+            <Button Content="インポート"
                     Width="90"
                     IsDefault="True"
                     Margin="0,0,8,0"
-                    Click="ImportButton_Click" />
-        </DockPanel>
+                    Click="ImportButton_Click">
+                <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                        <Setter Property="IsEnabled" Value="True" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Text, ElementName=InputTextBox}" Value="">
+                                <Setter Property="IsEnabled" Value="False" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+            <Button Content="キャンセル"
+                    Width="80"
+                    IsCancel="True"
+                    Click="CancelButton_Click" />
+        </StackPanel>
 
         <TextBox x:Name="InputTextBox"
                  TextWrapping="Wrap"
                  VerticalScrollBarVisibility="Auto"
                  FontFamily="Consolas"
                  FontSize="11"
-                 AcceptsReturn="False" />
+                 AcceptsReturn="True" />
 
     </DockPanel>
 </Window>
