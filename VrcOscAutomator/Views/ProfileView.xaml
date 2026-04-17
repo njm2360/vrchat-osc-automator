@@ -47,7 +47,7 @@
                                 <TextBlock Text="値:"
                                            Width="36" VerticalAlignment="Center"
                                            Foreground="#444" />
-                                <Slider Width="220" Minimum="-1.0" Maximum="1.0"
+                                <Slider Width="185" Minimum="-1.0" Maximum="1.0"
                                         SmallChange="0.05" LargeChange="0.1"
                                         Value="{Binding FloatValue, UpdateSourceTrigger=PropertyChanged}"
                                         VerticalAlignment="Center" Margin="0,0,10,0" />
