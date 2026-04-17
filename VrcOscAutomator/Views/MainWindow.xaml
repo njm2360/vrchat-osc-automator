@@ -283,13 +283,13 @@
             </StatusBarItem>
         </StatusBar>
 
-        <!-- ===== 下部: 再生コントロール ===== -->
+        <!-- ===== 下部: 実行コントロール ===== -->
         <Border DockPanel.Dock="Bottom"
                 BorderBrush="#DDDDDD" BorderThickness="0,1,0,0"
                 Padding="8,6">
             <DockPanel>
                 <CheckBox DockPanel.Dock="Left"
-                          Content="ループ再生"
+                          Content="ループ実行"
                           IsChecked="{Binding IsLoopMode}"
                           IsEnabled="{Binding IsNotPlaying}"
                           VerticalAlignment="Center"

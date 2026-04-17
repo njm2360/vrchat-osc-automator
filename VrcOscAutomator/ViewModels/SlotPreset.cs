@@ -7,7 +7,7 @@ public abstract record SlotPreset(string Name)
     // ── カテゴリ ──────────────────────────────────────────────────────
     public string Category => this switch
     {
-        WaitPreset or LoopBeginPreset or LoopEndPreset or BreakpointPreset => "シーケンス制御",
+        WaitPreset or RandomWaitPreset or LoopBeginPreset or LoopEndPreset or BreakpointPreset => "シーケンス制御",
         KeySinglePreset or KeyTypeStringPreset => "キーボード",
         MouseButtonPreset or MouseWheelPreset or MouseMovePreset => "マウス",
         _ => "OSC",
@@ -19,6 +19,7 @@ public abstract record SlotPreset(string Name)
     public bool IsBuiltinInt => this is BuiltinPreset { ValueType: OscValueType.Int };
     public bool IsCustom => this is CustomPreset;
     public bool IsWait => this is WaitPreset;
+    public bool IsRandomWait => this is RandomWaitPreset;
     public bool IsLoopBegin => this is LoopBeginPreset;
     public bool IsLoopEnd => this is LoopEndPreset;
     public bool IsLoopMarker => this is LoopBeginPreset or LoopEndPreset;
@@ -34,6 +35,7 @@ public abstract record SlotPreset(string Name)
     [
         // シーケンス制御
         new WaitPreset("待機"),
+        new RandomWaitPreset("ランダム待機"),
         new LoopBeginPreset("繰り返し開始"),
         new LoopEndPreset("繰り返し終了"),
         new BreakpointPreset("ブレークポイント"),
@@ -86,6 +88,8 @@ public abstract record SlotPreset(string Name)
 }
 
 public sealed record WaitPreset(string Name) : SlotPreset(Name);
+
+public sealed record RandomWaitPreset(string Name) : SlotPreset(Name);
 
 public sealed record BreakpointPreset(string Name) : SlotPreset(Name);
 

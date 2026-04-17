@@ -152,6 +152,25 @@
                                        Foreground="#888" FontStyle="Italic"
                                        Visibility="{Binding SelectedPreset.IsWait, Converter={StaticResource BoolToVis}}" />
 
+                            <!-- ランダム待機 -->
+                            <StackPanel Orientation="Horizontal"
+                                        Visibility="{Binding SelectedPreset.IsRandomWait, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="最小:" Width="96"
+                                           VerticalAlignment="Center" Foreground="#444" />
+                                <TextBox Text="{Binding RandomWaitMinMs, UpdateSourceTrigger=PropertyChanged}"
+                                         Width="60" VerticalAlignment="Center"
+                                         b:NumericTextBoxBehavior.RefreshOnLostFocus="True"
+                                         b:NumericTextBoxBehavior.MinValue="0" />
+                                <TextBlock Text="ms 〜" Margin="6,0,12,0"
+                                           VerticalAlignment="Center" Foreground="#444" />
+                                <TextBox Text="{Binding RandomWaitMaxMs, UpdateSourceTrigger=PropertyChanged}"
+                                         Width="60" VerticalAlignment="Center"
+                                         b:NumericTextBoxBehavior.RefreshOnLostFocus="True"
+                                         b:NumericTextBoxBehavior.MinValue="0" />
+                                <TextBlock Text="ms" Margin="6,0,0,0"
+                                           VerticalAlignment="Center" Foreground="#444" />
+                            </StackPanel>
+
                             <!-- 繰り返し開始: 回数入力 -->
                             <StackPanel Orientation="Horizontal"
                                         Visibility="{Binding SelectedPreset.IsLoopBegin, Converter={StaticResource BoolToVis}}">

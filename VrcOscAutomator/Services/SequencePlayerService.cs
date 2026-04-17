@@ -113,6 +113,7 @@ public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender 
                     {
                         OscSlot osc => osc.DurationMs,
                         WaitSlot w => w.DurationMs,
+                        RandomWaitSlot rw => Random.Shared.Next(rw.MinMs, rw.MaxMs + 1),
                         KeySingleSlot ks => ks.DurationMs,
                         KeyTypeStringSlot kts => kts.DurationMs,
                         MouseButtonSlot mb => mb.DurationMs,

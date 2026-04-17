@@ -38,6 +38,7 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsMouseButtonMode))]
     [NotifyPropertyChangedFor(nameof(IsMouseWheelMode))]
     [NotifyPropertyChangedFor(nameof(IsMouseMoveMode))]
+    [NotifyPropertyChangedFor(nameof(IsRandomWaitMode))]
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
     [NotifyPropertyChangedFor(nameof(IsValid))]
     public partial SlotPreset SelectedPreset { get; set; } = SlotPreset.All[0];
@@ -87,6 +88,15 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
     public partial int RepeatCount { get; set; } = 2;
+
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
+    public partial int RandomWaitMinMs { get; set; } = 300;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
+    public partial int RandomWaitMaxMs { get; set; } = 1000;
 
     // ── キーボード (単押し) ────────────────────────────────────────────
 
@@ -219,8 +229,9 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
 
     public bool ShowResetOption => SelectedPreset is BuiltinPreset;
 
-    public bool IsDurationEditable => SelectedPreset is not (LoopBeginPreset or LoopEndPreset or BreakpointPreset);
+    public bool IsDurationEditable => SelectedPreset is not (LoopBeginPreset or LoopEndPreset or BreakpointPreset or RandomWaitPreset);
 
+    public bool IsRandomWaitMode => SelectedPreset is RandomWaitPreset;
     public bool IsKeyboardSingleMode => SelectedPreset is KeySinglePreset;
     public bool IsKeyboardTypeStringMode => SelectedPreset is KeyTypeStringPreset;
     public bool IsMouseButtonMode => SelectedPreset is MouseButtonPreset;
@@ -244,6 +255,7 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
         LoopBeginPreset => RepeatCount == 0 ? "エンドレス" : $"x {RepeatCount} 回",
         LoopEndPreset => "—",
         WaitPreset => "—",
+        RandomWaitPreset => $"{RandomWaitMinMs}ms 〜 {RandomWaitMaxMs}ms",
         BreakpointPreset => "—",
         KeySinglePreset => $"{SelectedKey.Name} [{SelectedKeyAction switch { KeyAction.Press => "押す", KeyAction.Release => "離す", _ => "押して離す" }}]",
         KeyTypeStringPreset => TypeText.Length == 0
@@ -284,6 +296,7 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
         LoopBeginPreset => new LoopBeginSlot(RepeatCount),
         LoopEndPreset => new LoopEndSlot(),
         WaitPreset => new WaitSlot(DurationMs),
+        RandomWaitPreset => new RandomWaitSlot(RandomWaitMinMs, RandomWaitMaxMs),
         BreakpointPreset => new BreakpointSlot(),
         KeySinglePreset => new KeySingleSlot(SelectedKey.Code, SelectedKeyAction, DurationMs),
         KeyTypeStringPreset => new KeyTypeStringSlot(TypeText, AppendNewline, DurationMs),
@@ -308,6 +321,12 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
         LoopBeginSlot lb => new() { SelectedPreset = SlotPreset.All.OfType<LoopBeginPreset>().First(), RepeatCount = lb.RepeatCount },
         LoopEndSlot => new() { SelectedPreset = SlotPreset.All.OfType<LoopEndPreset>().First() },
         WaitSlot w => new() { SelectedPreset = SlotPreset.All.OfType<WaitPreset>().First(), DurationMs = w.DurationMs },
+        RandomWaitSlot rw => new()
+        {
+            SelectedPreset = SlotPreset.All.OfType<RandomWaitPreset>().First(),
+            RandomWaitMinMs = rw.MinMs,
+            RandomWaitMaxMs = rw.MaxMs,
+        },
         BreakpointSlot => new() { SelectedPreset = SlotPreset.All.OfType<BreakpointPreset>().First() },
         KeySingleSlot ks => new()
         {

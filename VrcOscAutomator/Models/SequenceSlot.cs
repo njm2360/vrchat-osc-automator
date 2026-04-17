@@ -8,6 +8,7 @@ namespace VrcOscAutomator.Models;
 [JsonDerivedType(typeof(BoolSlot), "bool")]
 [JsonDerivedType(typeof(StringSlot), "string")]
 [JsonDerivedType(typeof(WaitSlot), "wait")]
+[JsonDerivedType(typeof(RandomWaitSlot), "random_wait")]
 [JsonDerivedType(typeof(LoopBeginSlot), "loop_begin")]
 [JsonDerivedType(typeof(LoopEndSlot), "loop_end")]
 [JsonDerivedType(typeof(KeySingleSlot), "key_single")]
@@ -54,6 +55,9 @@ public record StringSlot(
 
 /// <summary>OSC を送信せず待機するスロット。</summary>
 public record WaitSlot(int DurationMs = 500) : SequenceSlot;
+
+/// <summary>MinMs〜MaxMs のランダム時間待機するスロット。</summary>
+public record RandomWaitSlot(int MinMs = 300, int MaxMs = 1000) : SequenceSlot;
 
 /// <summary>繰り返しブロックの開始マーカー。</summary>
 public record LoopBeginSlot(int RepeatCount = 2) : SequenceSlot;

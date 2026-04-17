@@ -76,6 +76,17 @@ public class SequencePlayerServiceTests : IDisposable
         _sender.Verify(s => s.SendInt(It.IsAny<string>(), It.IsAny<int>()), Times.Never);
     }
 
+    [Fact]
+    public async Task PlayAsync_RandomWaitSlot_DoesNotSendOsc()
+    {
+        var slots = Slots(new RandomWaitSlot(0, 10));
+
+        await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
+
+        _sender.Verify(s => s.SendFloat(It.IsAny<string>(), It.IsAny<float>()), Times.Never);
+        _sender.Verify(s => s.SendInt(It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+    }
+
     // ─── ResetOnComplete ──────────────────────────────────────────────────
 
     [Fact]
@@ -415,13 +426,13 @@ public class SequencePlayerServiceTests : IDisposable
     public async Task ResumeAsync_RemainingTimePreserved_SlotDoesNotRestartFromFull()
     {
         // Pause 後に再開したとき、経過分だけ短くなった残り時間でカウントが再開されること（ストップウォッチ動作）
-        // Duration=400ms のスロット、約30ms 再生後に Pause → 残り約370ms のはず
+        // Duration=400ms のスロット、約30ms 実行後に Pause → 残り約370ms のはず
         // Pause 中に 500ms 待機（Duration を超える時間）してから Resume しても、
         // Resume 後に自然完了するまでの追加時間は ~400ms ではなく ~370ms 以内であること
         var slots = Slots(new IntSlot("/input/Jump", 1, 400, false));
 
         Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
-        await Task.Delay(30);   // ~30ms 再生
+        await Task.Delay(30);   // ~30ms 実行
         await _sut.PauseAsync();
         await Task.Delay(500);  // Pause 中に Duration を超えて待機（カウントされてはいけない）
         await _sut.ResumeAsync();
