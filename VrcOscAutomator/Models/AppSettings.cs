@@ -9,5 +9,4 @@ public sealed class AppSettings
     public HotkeySettings Hotkeys { get; set; } = new();
     public KeyRepeatSettings KeyRepeat { get; set; } = new();
     public InputSettings Input { get; set; } = new();
-    public bool IsLoopMode { get; set; } = false;
 }

@@ -24,6 +24,9 @@ public sealed partial class ProfileViewModel : ObservableObject
     public partial string Name { get; set; } = string.Empty;
 
     [ObservableProperty]
+    public partial bool IsLoopMode { get; set; }
+
+    [ObservableProperty]
     public partial bool IsRenaming { get; set; }
 
     private string _nameBeforeRename = string.Empty;
@@ -111,7 +114,7 @@ public sealed partial class ProfileViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanExport))]
     private void Export()
     {
-        string json = _importExport.Export(Name, Slots.Select(s => s.ToModel()));
+        string json = _importExport.Export(Name, Slots.Select(s => s.ToModel()), IsLoopMode);
         _dialogService.ShowExportDialog(json);
     }
 
@@ -144,6 +147,7 @@ public sealed partial class ProfileViewModel : ObservableObject
             return;
 
         if (!string.IsNullOrEmpty(data.Name)) Name = data.Name;
+        IsLoopMode = data.IsLoopMode;
 
         Slots.Clear();
         foreach (SequenceSlot slot in data.Slots)
@@ -167,12 +171,14 @@ public sealed partial class ProfileViewModel : ObservableObject
     public Profile ToModel() => new()
     {
         Name = Name,
+        IsLoopMode = IsLoopMode,
         Slots = [.. Slots.Select(s => s.ToModel())],
     };
 
     public void LoadFromModel(Profile profile)
     {
         Name = profile.Name;
+        IsLoopMode = profile.IsLoopMode;
         Slots.Clear();
         foreach (SequenceSlot slot in profile.Slots)
             Slots.Add(SequenceSlotViewModel.FromModel(slot));

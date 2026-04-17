@@ -45,8 +45,23 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(StartCommand))]
     public partial int SelectedProfileIndex { get; set; }
 
-    [ObservableProperty]
-    public partial bool IsLoopMode { get; set; }
+    partial void OnSelectedProfileIndexChanged(int value) => OnPropertyChanged("IsLoopMode");
+
+    public bool IsLoopMode
+    {
+        get => SelectedProfileIndex >= 0 && SelectedProfileIndex < Profiles.Count
+               ? Profiles[SelectedProfileIndex].IsLoopMode
+               : false;
+        set
+        {
+            if (SelectedProfileIndex >= 0 && SelectedProfileIndex < Profiles.Count
+                && Profiles[SelectedProfileIndex].IsLoopMode != value)
+            {
+                Profiles[SelectedProfileIndex].IsLoopMode = value;
+                OnPropertyChanged();
+            }
+        }
+    }
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsKeyboardVkMode))]
     [NotifyPropertyChangedFor(nameof(IsKeyboardScanMode))]
@@ -128,6 +143,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 StartCommand.NotifyCanExecuteChanged();
                 OnPropertyChanged(nameof(StatusMessage));
             }
+            else if (e.PropertyName == nameof(ProfileViewModel.IsLoopMode)
+                     && Profiles.IndexOf(profile) == SelectedProfileIndex)
+            {
+                OnPropertyChanged(nameof(IsLoopMode));
+            }
         };
         Profiles.Add(profile);
         return profile;
@@ -195,7 +215,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
         MouseMode = settings.Input.MouseMode;
         _keyboardSender.Mode = KeyboardMode;
         _mouseSender.Mode = MouseMode;
-        IsLoopMode = settings.IsLoopMode;
 
         Profiles.Clear();
         if (settings.Profiles.Count == 0)
@@ -332,7 +351,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
             Hotkeys = _hotkeys,
             KeyRepeat = _keyRepeat,
             Input = new InputSettings { KeyboardMode = KeyboardMode, MouseMode = MouseMode },
-            IsLoopMode = IsLoopMode,
         };
         await _repository.SaveAsync(settings);
     }

@@ -13,8 +13,8 @@ public sealed class SequenceImportExportService : ISequenceImportExportService
         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
-    public string Export(string name, IEnumerable<SequenceSlot> slots)
-        => JsonSerializer.Serialize(new ProfileExportData(name, slots.ToList()), Options);
+    public string Export(string name, IEnumerable<SequenceSlot> slots, bool isLoopMode)
+        => JsonSerializer.Serialize(new ProfileExportData(name, slots.ToList(), isLoopMode), Options);
 
     public ProfileExportData? Import(string input)
     {

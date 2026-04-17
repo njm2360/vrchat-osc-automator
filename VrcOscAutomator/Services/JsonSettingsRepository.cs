@@ -47,10 +47,10 @@ public sealed class JsonSettingsRepository : ISettingsRepository
         {
             Targets = legacy.Targets,
             Hotkeys = legacy.Hotkeys,
-            IsLoopMode = legacy.IsLoopMode,
             Profiles = legacy.Profiles.Select(p => new Profile
             {
                 Name = p.Name,
+                IsLoopMode = legacy.IsLoopMode,
                 Slots = p.Slots.Select(MigrateLegacySlot).ToList(),
             }).ToList(),
         };

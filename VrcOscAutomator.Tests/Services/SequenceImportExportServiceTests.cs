@@ -17,9 +17,8 @@ public class SequenceImportExportServiceTests
     {
         var slots = new SequenceSlot[] { new FloatSlot("/test", 0.5f) };
 
-        string result = _sut.Export("Test", slots);
+        string result = _sut.Export("Test", slots, false);
 
-        // valid JSON かどうかは例外なしでパースできることで確認
         Action act = () => JsonDocument.Parse(result);
         act.Should().NotThrow();
     }
@@ -29,11 +28,22 @@ public class SequenceImportExportServiceTests
     {
         var slots = new SequenceSlot[] { new FloatSlot("/input/Vertical", 1.0f, 300, false) };
 
-        string json = _sut.Export("MyProfile", slots);
+        string json = _sut.Export("MyProfile", slots, false);
 
         using var doc = JsonDocument.Parse(json);
         doc.RootElement.GetProperty("name").GetString().Should().Be("MyProfile");
         doc.RootElement.GetProperty("slots")[0].GetProperty("type").GetString().Should().Be("float");
+    }
+
+    [Fact]
+    public void Export_IncludesIsLoopMode()
+    {
+        var slots = new SequenceSlot[] { new FloatSlot("/test", 0.5f) };
+
+        string json = _sut.Export("Test", slots, true);
+
+        using var doc = JsonDocument.Parse(json);
+        doc.RootElement.GetProperty("isLoopMode").GetBoolean().Should().BeTrue();
     }
 
     // ─── Import ────────────────────────────────────────────────────────────
@@ -48,12 +58,24 @@ public class SequenceImportExportServiceTests
             new WaitSlot(1000),
         };
 
-        string json = _sut.Export("RoundTrip", slots);
+        string json = _sut.Export("RoundTrip", slots, false);
         ProfileExportData? result = _sut.Import(json);
 
         result.Should().NotBeNull();
         result!.Name.Should().Be("RoundTrip");
         result.Slots.Should().BeEquivalentTo(slots, o => o.RespectingRuntimeTypes());
+    }
+
+    [Fact]
+    public void Import_RoundTrip_PreservesIsLoopMode()
+    {
+        var slots = new SequenceSlot[] { new IntSlot("/input/Jump", 1) };
+
+        string json = _sut.Export("Test", slots, true);
+        ProfileExportData? result = _sut.Import(json);
+
+        result.Should().NotBeNull();
+        result!.IsLoopMode.Should().BeTrue();
     }
 
     [Fact]
@@ -66,7 +88,7 @@ public class SequenceImportExportServiceTests
             new LoopEndSlot(),
         };
 
-        string json = _sut.Export("LoopTest", slots);
+        string json = _sut.Export("LoopTest", slots, false);
         ProfileExportData? result = _sut.Import(json);
 
         result.Should().NotBeNull();
@@ -87,7 +109,7 @@ public class SequenceImportExportServiceTests
     [Fact]
     public void Import_EmptySlots_ReturnsNull()
     {
-        string json = _sut.Export("Empty", []);
+        string json = _sut.Export("Empty", [], false);
         ProfileExportData? result = _sut.Import(json);
 
         result.Should().BeNull();
@@ -104,7 +126,7 @@ public class SequenceImportExportServiceTests
             new StringSlot("/d","str",  50, false),
         };
 
-        string json = _sut.Export("AllTypes", slots);
+        string json = _sut.Export("AllTypes", slots, false);
         ProfileExportData? result = _sut.Import(json);
 
         result.Should().NotBeNull();

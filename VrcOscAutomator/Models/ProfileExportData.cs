@@ -1,3 +1,3 @@
 namespace VrcOscAutomator.Models;
 
-public record ProfileExportData(string Name, List<SequenceSlot> Slots);
+public record ProfileExportData(string Name, List<SequenceSlot> Slots, bool IsLoopMode);

@@ -350,12 +350,24 @@ public class ProfileViewModelTests
     public void Export_CallsImportExportServiceAndShowsDialog()
     {
         _sut.AddSlotCommand.Execute(null);
-        _importExport.Setup(s => s.Export(It.IsAny<string>(), It.IsAny<IEnumerable<SequenceSlot>>())).Returns("jsondata");
+        _importExport.Setup(s => s.Export(It.IsAny<string>(), It.IsAny<IEnumerable<SequenceSlot>>(), It.IsAny<bool>())).Returns("jsondata");
 
         _sut.ExportCommand.Execute(null);
 
-        _importExport.Verify(s => s.Export(It.IsAny<string>(), It.IsAny<IEnumerable<SequenceSlot>>()), Times.Once);
+        _importExport.Verify(s => s.Export(It.IsAny<string>(), It.IsAny<IEnumerable<SequenceSlot>>(), It.IsAny<bool>()), Times.Once);
         _dialog.Verify(d => d.ShowExportDialog("jsondata"), Times.Once);
+    }
+
+    [Fact]
+    public void Export_PassesIsLoopModeToService()
+    {
+        _sut.AddSlotCommand.Execute(null);
+        _sut.IsLoopMode = true;
+        _importExport.Setup(s => s.Export(It.IsAny<string>(), It.IsAny<IEnumerable<SequenceSlot>>(), true)).Returns("jsondata");
+
+        _sut.ExportCommand.Execute(null);
+
+        _importExport.Verify(s => s.Export(It.IsAny<string>(), It.IsAny<IEnumerable<SequenceSlot>>(), true), Times.Once);
     }
 
     // ─── Import ───────────────────────────────────────────────────────────
@@ -410,7 +422,7 @@ public class ProfileViewModelTests
         _sut.AddSlotCommand.Execute(null);
         _dialog.Setup(d => d.ShowImportDialog()).Returns("data");
         _importExport.Setup(s => s.Import("data")).Returns(
-            new ProfileExportData("", [new IntSlot("/input/Jump", 1)]));
+            new ProfileExportData("", [new IntSlot("/input/Jump", 1)], false));
         _dialog.Setup(d => d.ConfirmOverwrite()).Returns(false);
 
         _sut.ImportCommand.Execute(null);
@@ -428,7 +440,7 @@ public class ProfileViewModelTests
             new IntSlot("/input/Voice", 1),
         };
         _dialog.Setup(d => d.ShowImportDialog()).Returns("data");
-        _importExport.Setup(s => s.Import("data")).Returns(new ProfileExportData("", [.. importedSlots]));
+        _importExport.Setup(s => s.Import("data")).Returns(new ProfileExportData("", [.. importedSlots], false));
         _dialog.Setup(d => d.ConfirmOverwrite()).Returns(true);
 
         _sut.ImportCommand.Execute(null);
@@ -441,7 +453,7 @@ public class ProfileViewModelTests
     {
         var importedSlots = new SequenceSlot[] { new IntSlot("/input/Jump", 1) };
         _dialog.Setup(d => d.ShowImportDialog()).Returns("data");
-        _importExport.Setup(s => s.Import("data")).Returns(new ProfileExportData("", [.. importedSlots]));
+        _importExport.Setup(s => s.Import("data")).Returns(new ProfileExportData("", [.. importedSlots], false));
 
         _sut.ImportCommand.Execute(null);
 
@@ -455,11 +467,13 @@ public class ProfileViewModelTests
     public void ToModel_ReturnsProfileWithCorrectNameAndSlots()
     {
         _sut.Name = "MyProfile";
+        _sut.IsLoopMode = true;
         _sut.AddSlotCommand.Execute(null);
 
         Profile model = _sut.ToModel();
 
         model.Name.Should().Be("MyProfile");
+        model.IsLoopMode.Should().BeTrue();
         model.Slots.Should().ContainSingle();
     }
 
@@ -471,6 +485,7 @@ public class ProfileViewModelTests
         var profile = new Profile
         {
             Name = "Loaded",
+            IsLoopMode = true,
             Slots =
             [
                 new IntSlot("/input/Jump", 1),
@@ -481,6 +496,7 @@ public class ProfileViewModelTests
         _sut.LoadFromModel(profile);
 
         _sut.Name.Should().Be("Loaded");
+        _sut.IsLoopMode.Should().BeTrue();
         _sut.Slots.Should().HaveCount(2);
     }
 
@@ -490,6 +506,7 @@ public class ProfileViewModelTests
         var profile = new Profile
         {
             Name = "RT",
+            IsLoopMode = true,
             Slots =
             [
                 new LoopBeginSlot(3),
@@ -606,7 +623,7 @@ public class ProfileViewModelTests
         _sut.Name = "OldName";
         _dialog.Setup(d => d.ShowImportDialog()).Returns("data");
         _importExport.Setup(s => s.Import("data"))
-            .Returns(new ProfileExportData("NewName", [new IntSlot("/x", 1)]));
+            .Returns(new ProfileExportData("NewName", [new IntSlot("/x", 1)], false));
 
         _sut.ImportCommand.Execute(null);
 
@@ -619,10 +636,22 @@ public class ProfileViewModelTests
         _sut.Name = "KeepMe";
         _dialog.Setup(d => d.ShowImportDialog()).Returns("data");
         _importExport.Setup(s => s.Import("data"))
-            .Returns(new ProfileExportData("", [new IntSlot("/x", 1)]));
+            .Returns(new ProfileExportData("", [new IntSlot("/x", 1)], false));
 
         _sut.ImportCommand.Execute(null);
 
         _sut.Name.Should().Be("KeepMe");
+    }
+
+    [Fact]
+    public void Import_SetsIsLoopModeFromData()
+    {
+        _dialog.Setup(d => d.ShowImportDialog()).Returns("data");
+        _importExport.Setup(s => s.Import("data"))
+            .Returns(new ProfileExportData("", [new IntSlot("/x", 1)], true));
+
+        _sut.ImportCommand.Execute(null);
+
+        _sut.IsLoopMode.Should().BeTrue();
     }
 }
