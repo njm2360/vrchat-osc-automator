@@ -4,9 +4,218 @@
         xmlns:vm="clr-namespace:VrcOscAutomator.ViewModels"
         xmlns:views="clr-namespace:VrcOscAutomator.Views"
         xmlns:models="clr-namespace:VrcOscAutomator.Models"
+        xmlns:conv="clr-namespace:VrcOscAutomator.Converters"
         Title="{Binding WindowTitle}"
         Height="400" Width="600"
         ResizeMode="NoResize">
+
+    <Window.Resources>
+        <conv:BoolToVisibilityConverter x:Key="BoolToVis" />
+        <conv:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis" />
+
+        <Style x:Key="TabAddButtonStyle" TargetType="Button">
+            <Setter Property="OverridesDefaultStyle" Value="True" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Cursor" Value="Arrow" />
+            <Setter Property="Margin" Value="2,0,2,0" />
+            <Setter Property="VerticalAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Padding="8,0"
+                                Background="Transparent"
+                                BorderBrush="#AAAAAA"
+                                BorderThickness="1,0,0,0">
+                            <TextBlock Text="+"
+                                       FontSize="14"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       Foreground="#555555" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#E0E0E0" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#C0C0C0" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="TabCloseButtonStyle" TargetType="Button">
+            <Setter Property="OverridesDefaultStyle" Value="True" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Cursor" Value="Arrow" />
+            <Setter Property="Margin" Value="3,0,0,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Width="15" Height="15"
+                                CornerRadius="2"
+                                Background="Transparent">
+                            <TextBlock Text="×"
+                                       FontSize="9"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#C0C0C0" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#909090" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- スリムスクロールバー用スタイル群 -->
+        <Style x:Key="SlimScrollBarPageButton" TargetType="RepeatButton">
+            <Setter Property="OverridesDefaultStyle" Value="True" />
+            <Setter Property="IsTabStop" Value="False" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RepeatButton">
+                        <Border Background="Transparent" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SlimScrollBarThumb" TargetType="Thumb">
+            <Setter Property="OverridesDefaultStyle" Value="True" />
+            <Setter Property="IsTabStop" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Border x:Name="Bd"
+                                Background="#B0B0B0"
+                                CornerRadius="3"
+                                Margin="0,1" />
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#808080" />
+                            </Trigger>
+                            <Trigger Property="IsDragging" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#505050" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SlimHorizontalScrollBarStyle" TargetType="ScrollBar">
+            <Setter Property="OverridesDefaultStyle" Value="True" />
+            <Setter Property="Height" Value="6" />
+            <Setter Property="Cursor" Value="Arrow" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Grid>
+                            <Border Background="#E0E0E0" CornerRadius="3" />
+                            <Track x:Name="PART_Track" IsDirectionReversed="False">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Style="{StaticResource SlimScrollBarPageButton}"
+                                                  Command="ScrollBar.PageLeftCommand" />
+                                </Track.DecreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Style="{StaticResource SlimScrollBarThumb}" />
+                                </Track.Thumb>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Style="{StaticResource SlimScrollBarPageButton}"
+                                                  Command="ScrollBar.PageRightCommand" />
+                                </Track.IncreaseRepeatButton>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="TabStripScrollViewerStyle" TargetType="ScrollViewer">
+            <Setter Property="OverridesDefaultStyle" Value="True" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollViewer">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <ScrollContentPresenter Grid.Row="0" />
+                            <ScrollBar x:Name="PART_HorizontalScrollBar"
+                                       Grid.Row="1"
+                                       Orientation="Horizontal"
+                                       Minimum="0"
+                                       Maximum="{TemplateBinding ScrollableWidth}"
+                                       ViewportSize="{TemplateBinding ViewportWidth}"
+                                       Value="{TemplateBinding HorizontalOffset}"
+                                       Visibility="{TemplateBinding ComputedHorizontalScrollBarVisibility}"
+                                       Style="{StaticResource SlimHorizontalScrollBarStyle}" />
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- スクロール可能タブ + ＋ボタン付き TabControl ControlTemplate -->
+        <Style x:Key="ScrollableTabControlStyle" TargetType="TabControl">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabControl">
+                        <Grid KeyboardNavigation.TabNavigation="Local">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <!-- タブストリップ: スクロール領域 + ＋ボタン -->
+                            <DockPanel Grid.Row="0" LastChildFill="True">
+                                <Button DockPanel.Dock="Right"
+                                        Style="{StaticResource TabAddButtonStyle}"
+                                        Command="{Binding DataContext.AddProfileCommand,
+                                                          RelativeSource={RelativeSource AncestorType=Window}}"
+                                        ToolTip="プロファイルを追加" />
+                                <ScrollViewer x:Name="TabStripScrollViewer"
+                                              Style="{StaticResource TabStripScrollViewerStyle}"
+                                              HorizontalScrollBarVisibility="Auto"
+                                              VerticalScrollBarVisibility="Disabled">
+                                    <TabPanel x:Name="HeaderPanel"
+                                              IsItemsHost="True"
+                                              KeyboardNavigation.TabIndex="1"
+                                              Background="Transparent" />
+                                </ScrollViewer>
+                            </DockPanel>
+
+                            <!-- コンテンツエリア -->
+                            <Border Grid.Row="1"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    Background="{TemplateBinding Background}"
+                                    KeyboardNavigation.TabNavigation="Local"
+                                    KeyboardNavigation.DirectionalNavigation="Contained"
+                                    KeyboardNavigation.TabIndex="2">
+                                <ContentPresenter x:Name="PART_SelectedContentHost"
+                                                  ContentSource="SelectedContent"
+                                                  Margin="{TemplateBinding Padding}" />
+                            </Border>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
 
 <DockPanel>
 
@@ -111,12 +320,41 @@
 
         <!-- ===== 中央: プロファイル タブ ===== -->
         <TabControl ItemsSource="{Binding Profiles}"
-                    SelectedIndex="{Binding SelectedProfileIndex}">
+                    SelectedIndex="{Binding SelectedProfileIndex}"
+                    Style="{StaticResource ScrollableTabControlStyle}"
+                    x:Name="ProfileTabControl"
+                    PreviewMouseWheel="TabControl_PreviewMouseWheel">
 
-            <!-- タブヘッダー -->
+            <!-- タブヘッダー: リネーム + 削除ボタン -->
             <TabControl.ItemTemplate>
                 <DataTemplate DataType="{x:Type vm:ProfileViewModel}">
-                    <TextBlock Text="{Binding Name}" Padding="4,2" />
+                    <Grid>
+                        <!-- 通常表示 -->
+                        <StackPanel Orientation="Horizontal"
+                                    Visibility="{Binding IsRenaming, Converter={StaticResource InverseBoolToVis}}"
+                                    MouseLeftButtonDown="TabHeader_MouseLeftButtonDown">
+                            <TextBlock Text="{Binding Name}" Padding="2,0" VerticalAlignment="Center" />
+                            <Button Style="{StaticResource TabCloseButtonStyle}"
+                                    Command="{Binding DataContext.DeleteProfileCommand,
+                                                      RelativeSource={RelativeSource AncestorType=Window}}"
+                                    CommandParameter="{Binding}"
+                                    ToolTip="このプロファイルを削除" />
+                        </StackPanel>
+                        <!-- リネームモード -->
+                        <TextBox MaxLength="30"
+                                 MinWidth="60"
+                                 Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
+                                 Visibility="{Binding IsRenaming, Converter={StaticResource BoolToVis}}"
+                                 VerticalAlignment="Center">
+                            <TextBox.Style>
+                                <Style TargetType="TextBox">
+                                    <EventSetter Event="Loaded"    Handler="RenameTextBox_Loaded" />
+                                    <EventSetter Event="LostFocus" Handler="RenameTextBox_LostFocus" />
+                                    <EventSetter Event="KeyDown"   Handler="RenameTextBox_KeyDown" />
+                                </Style>
+                            </TextBox.Style>
+                        </TextBox>
+                    </Grid>
                 </DataTemplate>
             </TabControl.ItemTemplate>
 

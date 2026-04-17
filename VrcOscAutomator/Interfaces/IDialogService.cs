@@ -17,4 +17,6 @@ public interface IDialogService
     HotkeySettings? ShowHotkeySettingsWindow(HotkeySettings currentSettings);
 
     KeyRepeatSettings? ShowKeyRepeatSettingsWindow(KeyRepeatSettings currentSettings);
+
+    bool ConfirmDeleteProfile(string profileName);
 }

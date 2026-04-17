@@ -4,7 +4,7 @@ namespace VrcOscAutomator.Interfaces;
 
 public interface ISequenceImportExportService
 {
-    string Export(IEnumerable<SequenceSlot> slots);
+    string Export(string name, IEnumerable<SequenceSlot> slots);
 
-    IReadOnlyList<SequenceSlot>? Import(string input);
+    ProfileExportData? Import(string input);
 }

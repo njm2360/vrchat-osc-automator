@@ -10,11 +10,15 @@ public sealed class SequenceImportExportService : ISequenceImportExportService
     {
         WriteIndented = true,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
-    public string Export(IEnumerable<SequenceSlot> slots)
-        => JsonSerializer.Serialize(slots.ToList(), Options);
+    public string Export(string name, IEnumerable<SequenceSlot> slots)
+        => JsonSerializer.Serialize(new ProfileExportData(name, slots.ToList()), Options);
 
-    public IReadOnlyList<SequenceSlot>? Import(string input)
-        => JsonSerializer.Deserialize<List<SequenceSlot>>(input, Options);
+    public ProfileExportData? Import(string input)
+    {
+        var data = JsonSerializer.Deserialize<ProfileExportData>(input, Options);
+        return data?.Slots is { Count: > 0 } ? data : null;
+    }
 }

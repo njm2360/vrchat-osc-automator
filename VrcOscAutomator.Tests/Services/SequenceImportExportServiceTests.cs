@@ -17,7 +17,7 @@ public class SequenceImportExportServiceTests
     {
         var slots = new SequenceSlot[] { new FloatSlot("/test", 0.5f) };
 
-        string result = _sut.Export(slots);
+        string result = _sut.Export("Test", slots);
 
         // valid JSON かどうかは例外なしでパースできることで確認
         Action act = () => JsonDocument.Parse(result);
@@ -25,23 +25,15 @@ public class SequenceImportExportServiceTests
     }
 
     [Fact]
-    public void Export_EmptyList_ReturnsEmptyJsonArray()
-    {
-        string result = _sut.Export([]);
-
-        using var doc = JsonDocument.Parse(result);
-        doc.RootElement.GetArrayLength().Should().Be(0);
-    }
-
-    [Fact]
-    public void Export_IncludesTypeDiscriminator()
+    public void Export_IncludesNameAndSlots()
     {
         var slots = new SequenceSlot[] { new FloatSlot("/input/Vertical", 1.0f, 300, false) };
 
-        string json = _sut.Export(slots);
+        string json = _sut.Export("MyProfile", slots);
 
         using var doc = JsonDocument.Parse(json);
-        doc.RootElement[0].GetProperty("type").GetString().Should().Be("float");
+        doc.RootElement.GetProperty("name").GetString().Should().Be("MyProfile");
+        doc.RootElement.GetProperty("slots")[0].GetProperty("type").GetString().Should().Be("float");
     }
 
     // ─── Import ────────────────────────────────────────────────────────────
@@ -56,10 +48,12 @@ public class SequenceImportExportServiceTests
             new WaitSlot(1000),
         };
 
-        string json = _sut.Export(slots);
-        IReadOnlyList<SequenceSlot>? result = _sut.Import(json);
+        string json = _sut.Export("RoundTrip", slots);
+        ProfileExportData? result = _sut.Import(json);
 
-        result.Should().BeEquivalentTo(slots, o => o.RespectingRuntimeTypes());
+        result.Should().NotBeNull();
+        result!.Name.Should().Be("RoundTrip");
+        result.Slots.Should().BeEquivalentTo(slots, o => o.RespectingRuntimeTypes());
     }
 
     [Fact]
@@ -72,13 +66,14 @@ public class SequenceImportExportServiceTests
             new LoopEndSlot(),
         };
 
-        string json = _sut.Export(slots);
-        IReadOnlyList<SequenceSlot>? result = _sut.Import(json);
+        string json = _sut.Export("LoopTest", slots);
+        ProfileExportData? result = _sut.Import(json);
 
-        result.Should().NotBeNull().And.HaveCount(3);
-        result![0].Should().Be(new LoopBeginSlot(5));
-        result[1].Should().Be(new IntSlot("/input/Jump", 1, 50, false));
-        result[2].Should().BeOfType<LoopEndSlot>();
+        result.Should().NotBeNull();
+        result!.Slots.Should().HaveCount(3);
+        result.Slots[0].Should().Be(new LoopBeginSlot(5));
+        result.Slots[1].Should().Be(new IntSlot("/input/Jump", 1, 50, false));
+        result.Slots[2].Should().BeOfType<LoopEndSlot>();
     }
 
     [Fact]
@@ -90,11 +85,12 @@ public class SequenceImportExportServiceTests
     }
 
     [Fact]
-    public void Import_EmptyJsonArray_ReturnsEmptyList()
+    public void Import_EmptySlots_ReturnsNull()
     {
-        IReadOnlyList<SequenceSlot>? result = _sut.Import("[]");
+        string json = _sut.Export("Empty", []);
+        ProfileExportData? result = _sut.Import(json);
 
-        result.Should().NotBeNull().And.BeEmpty();
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -108,9 +104,10 @@ public class SequenceImportExportServiceTests
             new StringSlot("/d","str",  50, false),
         };
 
-        string json = _sut.Export(slots);
-        IReadOnlyList<SequenceSlot>? result = _sut.Import(json);
+        string json = _sut.Export("AllTypes", slots);
+        ProfileExportData? result = _sut.Import(json);
 
-        result.Should().BeEquivalentTo(slots, o => o.RespectingRuntimeTypes());
+        result.Should().NotBeNull();
+        result!.Slots.Should().BeEquivalentTo(slots, o => o.RespectingRuntimeTypes());
     }
 }

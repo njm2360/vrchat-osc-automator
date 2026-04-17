@@ -21,7 +21,16 @@ public sealed partial class ProfileViewModel : ObservableObject
     }
 
     [ObservableProperty]
-    private string _name = string.Empty;
+    public partial string Name { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool IsRenaming { get; set; }
+
+    private string _nameBeforeRename = string.Empty;
+
+    public void BeginRename() { _nameBeforeRename = Name; IsRenaming = true; }
+    public void CommitRename() { string t = Name.Trim(); Name = t.Length > 0 ? t : _nameBeforeRename; IsRenaming = false; }
+    public void CancelRename() { Name = _nameBeforeRename; IsRenaming = false; }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RemoveSlotCommand))]
@@ -102,8 +111,8 @@ public sealed partial class ProfileViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanExport))]
     private void Export()
     {
-        string base64 = _importExport.Export(Slots.Select(s => s.ToModel()));
-        _dialogService.ShowExportDialog(base64);
+        string json = _importExport.Export(Name, Slots.Select(s => s.ToModel()));
+        _dialogService.ShowExportDialog(json);
     }
 
     private bool CanExport() => Slots.Count > 0;
@@ -114,10 +123,10 @@ public sealed partial class ProfileViewModel : ObservableObject
         string? input = _dialogService.ShowImportDialog();
         if (input is null or { Length: 0 }) return;
 
-        IReadOnlyList<SequenceSlot>? slots;
+        ProfileExportData? data;
         try
         {
-            slots = _importExport.Import(input);
+            data = _importExport.Import(input);
         }
         catch (Exception ex) when (ex is JsonException)
         {
@@ -125,7 +134,7 @@ public sealed partial class ProfileViewModel : ObservableObject
             return;
         }
 
-        if (slots is null or { Count: 0 })
+        if (data is null or { Slots.Count: 0 })
         {
             _dialogService.ShowError("スロットが含まれていないデータです。");
             return;
@@ -134,8 +143,10 @@ public sealed partial class ProfileViewModel : ObservableObject
         if (Slots.Count > 0 && !_dialogService.ConfirmOverwrite())
             return;
 
+        if (!string.IsNullOrEmpty(data.Name)) Name = data.Name;
+
         Slots.Clear();
-        foreach (SequenceSlot slot in slots)
+        foreach (SequenceSlot slot in data.Slots)
             Slots.Add(SequenceSlotViewModel.FromModel(slot));
     }
 

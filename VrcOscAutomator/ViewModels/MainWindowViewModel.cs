@@ -20,6 +20,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly IGlobalHotkeyService _hotkeyService;
     private readonly IKeyboardSender _keyboardSender;
     private readonly IMouseSender _mouseSender;
+    private readonly ISequenceImportExportService _importExport;
     private List<OscTarget> _targets = [];
     private HotkeySettings _hotkeys = new();
     private KeyRepeatSettings _keyRepeat = new();
@@ -63,6 +64,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public bool IsNotPlaying => !IsPlaying;
     private bool CanStart => IsNotPlaying
+        && Profiles.Count > 0
+        && SelectedProfileIndex >= 0 && SelectedProfileIndex < Profiles.Count
         && _targets.Any(t => t.IsEnabled)
         && Profiles[SelectedProfileIndex].Slots.Count > 0
         && Profiles[SelectedProfileIndex].AllSlotsValid;
@@ -72,6 +75,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         get
         {
             if (IsPlaying) return string.Empty;
+            if (Profiles.Count == 0 || SelectedProfileIndex < 0) return string.Empty;
             if (!_targets.Any(t => t.IsEnabled))
                 return "送信先が設定されていません。「送信先設定」から有効な送信先を追加してください。";
             if (Profiles[SelectedProfileIndex].Slots.Count == 0)
@@ -97,6 +101,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _repository = repository;
         _oscSender = oscSender;
         _dialogService = dialogService;
+        _importExport = importExport;
         _hotkeyService = hotkeyService;
         _keyboardSender = keyboardSender;
         _mouseSender = mouseSender;
@@ -105,24 +110,27 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _hotkeyService.PauseResumePressed += OnHotkeyPauseResumePressed;
         _hotkeyService.StopPressed += OnHotkeyStopPressed;
 
-        for (int i = 1; i <= 5; i++)
+        AddProfileInternal("Profile 1");
+    }
+
+    private ProfileViewModel AddProfileInternal(string name)
+    {
+        var profile = new ProfileViewModel(_dialogService, _importExport) { Name = name };
+        profile.Slots.CollectionChanged += (_, _) =>
         {
-            var profile = new ProfileViewModel(dialogService, importExport) { Name = $"Profile {i}" };
-            profile.Slots.CollectionChanged += (_, _) =>
+            StartCommand.NotifyCanExecuteChanged();
+            OnPropertyChanged(nameof(StatusMessage));
+        };
+        profile.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(ProfileViewModel.AllSlotsValid))
             {
                 StartCommand.NotifyCanExecuteChanged();
                 OnPropertyChanged(nameof(StatusMessage));
-            };
-            profile.PropertyChanged += (_, e) =>
-            {
-                if (e.PropertyName == nameof(ProfileViewModel.AllSlotsValid))
-                {
-                    StartCommand.NotifyCanExecuteChanged();
-                    OnPropertyChanged(nameof(StatusMessage));
-                }
-            };
-            Profiles.Add(profile);
-        }
+            }
+        };
+        Profiles.Add(profile);
+        return profile;
     }
 
     public void InitializeHotkeys(Window window)
@@ -155,6 +163,26 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task AddProfileAsync()
+    {
+        int n = Profiles.Count + 1;
+        string name = $"Profile {n}";
+        while (Profiles.Any(p => p.Name == name)) name = $"Profile {++n}";
+        SelectedProfileIndex = Profiles.IndexOf(AddProfileInternal(name));
+        await SaveAsync();
+    }
+
+    [RelayCommand]
+    private async Task DeleteProfileAsync(ProfileViewModel profile)
+    {
+        if (!_dialogService.ConfirmDeleteProfile(profile.Name)) return;
+        int idx = Profiles.IndexOf(profile);
+        Profiles.Remove(profile);
+        SelectedProfileIndex = Profiles.Count > 0 ? Math.Min(idx, Profiles.Count - 1) : -1;
+        await SaveAsync();
+    }
+
+    [RelayCommand]
     private async Task LoadedAsync()
     {
         AppSettings settings = await _repository.LoadAsync();
@@ -169,9 +197,21 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _mouseSender.Mode = MouseMode;
         IsLoopMode = settings.IsLoopMode;
 
-        for (int i = 0; i < Profiles.Count && i < settings.Profiles.Count; i++)
-            Profiles[i].LoadFromModel(settings.Profiles[i]);
+        Profiles.Clear();
+        if (settings.Profiles.Count == 0)
+        {
+            AddProfileInternal("Profile 1");
+        }
+        else
+        {
+            foreach (Profile p in settings.Profiles)
+            {
+                ProfileViewModel vm = AddProfileInternal(p.Name);
+                vm.LoadFromModel(p);
+            }
+        }
 
+        SelectedProfileIndex = 0;
         StartCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(StatusMessage));
     }

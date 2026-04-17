@@ -350,11 +350,11 @@ public class ProfileViewModelTests
     public void Export_CallsImportExportServiceAndShowsDialog()
     {
         _sut.AddSlotCommand.Execute(null);
-        _importExport.Setup(s => s.Export(It.IsAny<IEnumerable<SequenceSlot>>())).Returns("jsondata");
+        _importExport.Setup(s => s.Export(It.IsAny<string>(), It.IsAny<IEnumerable<SequenceSlot>>())).Returns("jsondata");
 
         _sut.ExportCommand.Execute(null);
 
-        _importExport.Verify(s => s.Export(It.IsAny<IEnumerable<SequenceSlot>>()), Times.Once);
+        _importExport.Verify(s => s.Export(It.IsAny<string>(), It.IsAny<IEnumerable<SequenceSlot>>()), Times.Once);
         _dialog.Verify(d => d.ShowExportDialog("jsondata"), Times.Once);
     }
 
@@ -397,7 +397,7 @@ public class ProfileViewModelTests
     public void Import_EmptySlotList_ShowsError()
     {
         _dialog.Setup(d => d.ShowImportDialog()).Returns("validjson");
-        _importExport.Setup(s => s.Import("validjson")).Returns([]);
+        _importExport.Setup(s => s.Import("validjson")).Returns((ProfileExportData?)null);
 
         _sut.ImportCommand.Execute(null);
 
@@ -410,7 +410,7 @@ public class ProfileViewModelTests
         _sut.AddSlotCommand.Execute(null);
         _dialog.Setup(d => d.ShowImportDialog()).Returns("data");
         _importExport.Setup(s => s.Import("data")).Returns(
-            [new IntSlot("/input/Jump", 1)]);
+            new ProfileExportData("", [new IntSlot("/input/Jump", 1)]));
         _dialog.Setup(d => d.ConfirmOverwrite()).Returns(false);
 
         _sut.ImportCommand.Execute(null);
@@ -428,7 +428,7 @@ public class ProfileViewModelTests
             new IntSlot("/input/Voice", 1),
         };
         _dialog.Setup(d => d.ShowImportDialog()).Returns("data");
-        _importExport.Setup(s => s.Import("data")).Returns(importedSlots);
+        _importExport.Setup(s => s.Import("data")).Returns(new ProfileExportData("", [.. importedSlots]));
         _dialog.Setup(d => d.ConfirmOverwrite()).Returns(true);
 
         _sut.ImportCommand.Execute(null);
@@ -441,7 +441,7 @@ public class ProfileViewModelTests
     {
         var importedSlots = new SequenceSlot[] { new IntSlot("/input/Jump", 1) };
         _dialog.Setup(d => d.ShowImportDialog()).Returns("data");
-        _importExport.Setup(s => s.Import("data")).Returns(importedSlots);
+        _importExport.Setup(s => s.Import("data")).Returns(new ProfileExportData("", [.. importedSlots]));
 
         _sut.ImportCommand.Execute(null);
 
@@ -502,5 +502,127 @@ public class ProfileViewModelTests
         Profile restored = _sut.ToModel();
 
         restored.Should().BeEquivalentTo(profile, o => o.RespectingRuntimeTypes());
+    }
+
+    // ─── Rename ───────────────────────────────────────────────────────────
+
+    [Fact]
+    public void BeginRename_SetsIsRenamingTrue()
+    {
+        _sut.Name = "Before";
+
+        _sut.BeginRename();
+
+        _sut.IsRenaming.Should().BeTrue();
+    }
+
+    [Fact]
+    public void CommitRename_SetsIsRenamingFalse()
+    {
+        _sut.Name = "Before";
+        _sut.BeginRename();
+        _sut.Name = "After";
+
+        _sut.CommitRename();
+
+        _sut.IsRenaming.Should().BeFalse();
+    }
+
+    [Fact]
+    public void CommitRename_PreservesNewName()
+    {
+        _sut.Name = "Before";
+        _sut.BeginRename();
+        _sut.Name = "After";
+
+        _sut.CommitRename();
+
+        _sut.Name.Should().Be("After");
+    }
+
+    [Fact]
+    public void CommitRename_TrimsWhitespace()
+    {
+        _sut.Name = "Before";
+        _sut.BeginRename();
+        _sut.Name = "  Trimmed  ";
+
+        _sut.CommitRename();
+
+        _sut.Name.Should().Be("Trimmed");
+    }
+
+    [Fact]
+    public void CommitRename_EmptyName_RevertsToOriginal()
+    {
+        _sut.Name = "Original";
+        _sut.BeginRename();
+        _sut.Name = "   ";
+
+        _sut.CommitRename();
+
+        _sut.Name.Should().Be("Original");
+    }
+
+    [Fact]
+    public void CancelRename_RevertsName()
+    {
+        _sut.Name = "Before";
+        _sut.BeginRename();
+        _sut.Name = "Changed";
+
+        _sut.CancelRename();
+
+        _sut.Name.Should().Be("Before");
+    }
+
+    [Fact]
+    public void CancelRename_SetsIsRenamingFalse()
+    {
+        _sut.Name = "Before";
+        _sut.BeginRename();
+
+        _sut.CancelRename();
+
+        _sut.IsRenaming.Should().BeFalse();
+    }
+
+    [Fact]
+    public void BeginRename_RaisesPropertyChanged_ForIsRenaming()
+    {
+        var changed = new List<string?>();
+        _sut.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        _sut.BeginRename();
+
+        changed.Should().Contain(nameof(ProfileViewModel.IsRenaming));
+    }
+
+    // ─── Import: 名前の反映 ────────────────────────────────────────────────
+
+    [Fact]
+    public void Import_WithNonEmptyName_SetsProfileName()
+    {
+        _sut.Name = "OldName";
+        _dialog.Setup(d => d.ShowImportDialog()).Returns("data");
+        _importExport.Setup(s => s.Import("data"))
+            .Returns(new ProfileExportData("NewName", [new IntSlot("/x", 1)]));
+
+        _sut.ImportCommand.Execute(null);
+
+        _sut.Name.Should().Be("NewName");
+    }
+
+    [Fact]
+    public void Import_WithEmptyName_KeepsExistingProfileName()
+    {
+        _sut.Name = "KeepMe";
+        _dialog.Setup(d => d.ShowImportDialog()).Returns("data");
+        _importExport.Setup(s => s.Import("data"))
+            .Returns(new ProfileExportData("", [new IntSlot("/x", 1)]));
+
+        _sut.ImportCommand.Execute(null);
+
+        _sut.Name.Should().Be("KeepMe");
     }
 }

@@ -31,6 +31,17 @@ public sealed class DialogService : IDialogService
         return result == MessageBoxResult.Yes;
     }
 
+    public bool ConfirmDeleteProfile(string profileName)
+    {
+        MessageBoxResult result = MessageBox.Show(
+            Application.Current.MainWindow,
+            $"プロファイル「{profileName}」を削除しますか？\nこの操作は元に戻せません。",
+            "プロファイルの削除",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+        return result == MessageBoxResult.Yes;
+    }
+
     public void ShowError(string message)
     {
         MessageBox.Show(
