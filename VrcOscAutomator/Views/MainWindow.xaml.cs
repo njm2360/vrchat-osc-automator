@@ -52,34 +52,6 @@ public partial class MainWindow : Window
         });
     }
 
-    private void TabHeader_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-    {
-        if (e.ClickCount == 2 && ((FrameworkElement)sender).DataContext is ProfileViewModel vm)
-            vm.BeginRename();
-    }
-
-    private void RenameTextBox_Loaded(object sender, RoutedEventArgs e)
-    {
-        if (sender is TextBox tb)
-        {
-            tb.SelectAll();
-            tb.Focus();
-        }
-    }
-
-    private void RenameTextBox_KeyDown(object sender, KeyEventArgs e)
-    {
-        if (((FrameworkElement)sender).DataContext is not ProfileViewModel vm) return;
-        if (e.Key == Key.Enter)  { vm.CommitRename(); e.Handled = true; }
-        if (e.Key == Key.Escape) { vm.CancelRename(); e.Handled = true; }
-    }
-
-    private void RenameTextBox_LostFocus(object sender, RoutedEventArgs e)
-    {
-        if (((FrameworkElement)sender).DataContext is ProfileViewModel vm)
-            vm.CommitRename();
-    }
-
     private void TabControl_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
     {
         if (sender is TabControl tc &&

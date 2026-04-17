@@ -5,6 +5,7 @@
         xmlns:views="clr-namespace:VrcOscAutomator.Views"
         xmlns:models="clr-namespace:VrcOscAutomator.Models"
         xmlns:conv="clr-namespace:VrcOscAutomator.Converters"
+        xmlns:b="clr-namespace:VrcOscAutomator.Behaviors"
         Title="{Binding WindowTitle}"
         Height="400" Width="600"
         ResizeMode="NoResize">
@@ -332,7 +333,7 @@
                         <!-- 通常表示 -->
                         <StackPanel Orientation="Horizontal"
                                     Visibility="{Binding IsRenaming, Converter={StaticResource InverseBoolToVis}}"
-                                    MouseLeftButtonDown="TabHeader_MouseLeftButtonDown">
+                                    b:RenameBehavior.EnableDoubleClickRename="True">
                             <TextBlock Text="{Binding Name}" Padding="2,0" VerticalAlignment="Center" />
                             <Button Style="{StaticResource TabCloseButtonStyle}"
                                     Command="{Binding DataContext.DeleteProfileCommand,
@@ -345,15 +346,8 @@
                                  MinWidth="60"
                                  Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
                                  Visibility="{Binding IsRenaming, Converter={StaticResource BoolToVis}}"
-                                 VerticalAlignment="Center">
-                            <TextBox.Style>
-                                <Style TargetType="TextBox">
-                                    <EventSetter Event="Loaded"    Handler="RenameTextBox_Loaded" />
-                                    <EventSetter Event="LostFocus" Handler="RenameTextBox_LostFocus" />
-                                    <EventSetter Event="KeyDown"   Handler="RenameTextBox_KeyDown" />
-                                </Style>
-                            </TextBox.Style>
-                        </TextBox>
+                                 VerticalAlignment="Center"
+                                 b:RenameBehavior.IsRenameBox="True" />
                     </Grid>
                 </DataTemplate>
             </TabControl.ItemTemplate>
