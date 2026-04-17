@@ -27,7 +27,7 @@ public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender 
     public bool IsPaused { get; private set; }
     public int CurrentSlotIndex { get; private set; } = -1;
 
-    public async Task PlayAsync(IReadOnlyList<SequenceSlot> slots, bool loop, IProgress<int>? slotProgress, CancellationToken cancellationToken)
+    public async Task PlayAsync(IReadOnlyList<SequenceSlot> slots, bool loop, IProgress<SequenceProgress>? slotProgress, CancellationToken cancellationToken)
     {
         // 前回の残留シグナルをクリア
         while (_resumeSignal.CurrentCount > 0)
@@ -35,14 +35,22 @@ public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender 
         IsPaused = false;
 
         _stopCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        _playTask = ExecuteAsync(slots, loop, slotProgress, _stopCts.Token);
+        _playTask = Task.Run(() => ExecuteAsync(slots, loop, slotProgress, _stopCts.Token), CancellationToken.None);
         await _playTask;
     }
 
-    private async Task ExecuteAsync(IReadOnlyList<SequenceSlot> slots, bool loop, IProgress<int>? slotProgress, CancellationToken stopCt)
+    private static IReadOnlyDictionary<int, int> BuildLoopIterations(Stack<(int startIndex, int remaining, int iteration)> stack)
     {
-        // ループスタック: (ループ開始インデックス, 残り繰り返し回数)
-        var loopStack = new Stack<(int startIndex, int remaining)>();
+        var dict = new Dictionary<int, int>(stack.Count);
+        foreach ((int startIndex, _, int iteration) in stack)
+            dict[startIndex] = iteration;
+        return dict;
+    }
+
+    private async Task ExecuteAsync(IReadOnlyList<SequenceSlot> slots, bool loop, IProgress<SequenceProgress>? slotProgress, CancellationToken stopCt)
+    {
+        // ループスタック: (ループ開始インデックス, 残り繰り返し回数, 現在の繰り返しカウント)
+        var loopStack = new Stack<(int startIndex, int remaining, int iteration)>();
 
         try
         {
@@ -68,7 +76,7 @@ public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender 
                     // ── 繰り返し開始マーカー ──────────────────────────
                     if (slot is LoopBeginSlot lb)
                     {
-                        loopStack.Push((i, lb.RepeatCount));
+                        loopStack.Push((i, lb.RepeatCount, 1));
                         i++;
                         continue;
                     }
@@ -78,11 +86,11 @@ public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender 
                     {
                         if (loopStack.Count > 0)
                         {
-                            (int startIdx, int remaining) = loopStack.Pop();
+                            (int startIdx, int remaining, int iteration) = loopStack.Pop();
                             // remaining == 0: 無限ループ、remaining > 1: まだ残りあり
                             if (remaining == 0 || remaining > 1)
                             {
-                                loopStack.Push((startIdx, remaining == 0 ? 0 : remaining - 1));
+                                loopStack.Push((startIdx, remaining == 0 ? 0 : remaining - 1, iteration + 1));
                                 i = startIdx + 1;
                                 continue;
                             }
@@ -95,7 +103,7 @@ public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender 
                     if (slot is BreakpointSlot)
                     {
                         CurrentSlotIndex = i;
-                        slotProgress?.Report(i);
+                        slotProgress?.Report(new SequenceProgress(i, BuildLoopIterations(loopStack)));
                         IsPaused = true;
                         ReleaseAllInputs();
                         await _resumeSignal.WaitAsync(stopCt);
@@ -106,7 +114,7 @@ public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender 
 
                     // ── 通常スロット（WaitSlot / OscSlot）──────────────
                     CurrentSlotIndex = i;
-                    slotProgress?.Report(i);
+                    slotProgress?.Report(new SequenceProgress(i, BuildLoopIterations(loopStack)));
 
                     OscSlot? activeOsc = slot as OscSlot;
                     int durationMs = slot switch
@@ -227,7 +235,7 @@ public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender 
             ClearInputState();
 
             CurrentSlotIndex = -1;
-            slotProgress?.Report(-1);
+            slotProgress?.Report(new SequenceProgress(-1, new Dictionary<int, int>()));
         }
     }
 

@@ -226,7 +226,7 @@ public class SequencePlayerServiceTests : IDisposable
             new IntSlot("/input/Voice", 1, 5, false)
         );
         var reported = new List<int>();
-        var progress = new Progress<int>(i => reported.Add(i));
+        var progress = new Progress<SequenceProgress>(p => reported.Add(p.SlotIndex));
 
         await _sut.PlayAsync(slots, loop: false, progress, CancellationToken.None);
 

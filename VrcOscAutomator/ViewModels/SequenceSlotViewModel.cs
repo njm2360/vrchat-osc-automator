@@ -87,6 +87,10 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
+    public partial int CurrentIteration { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
     public partial int RepeatCount { get; set; } = 2;
 
 
@@ -251,7 +255,9 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
 
     public string ParameterSummary => SelectedPreset switch
     {
-        LoopBeginPreset => RepeatCount == 0 ? "エンドレス" : $"x {RepeatCount} 回",
+        LoopBeginPreset => CurrentIteration > 0
+            ? (RepeatCount == 0 ? $"{CurrentIteration} 回目" : $"{CurrentIteration} / {RepeatCount} 回")
+            : (RepeatCount == 0 ? "エンドレス" : $"x {RepeatCount} 回"),
         LoopEndPreset => "—",
         WaitPreset => "—",
         RandomWaitPreset => $"{RandomWaitMinMs}ms 〜 {RandomWaitMaxMs}ms",

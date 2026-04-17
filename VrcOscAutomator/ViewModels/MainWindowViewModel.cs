@@ -174,11 +174,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
         if (IsPlaying) _ = StopAsync();
     }
 
-    private void OnSlotChanged(int index)
+    private void OnSlotChanged(SequenceProgress progress)
     {
         ProfileViewModel profile = Profiles[SelectedProfileIndex];
         for (int i = 0; i < profile.Slots.Count; i++)
-            profile.Slots[i].IsCurrentSlot = (i == index);
+        {
+            profile.Slots[i].IsCurrentSlot = i == progress.SlotIndex;
+            profile.Slots[i].CurrentIteration = progress.LoopIterations.TryGetValue(i, out int iter) ? iter : 0;
+        }
         IsPaused = _player.IsPaused;
     }
 
@@ -303,7 +306,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         try
         {
-            var progress = new Progress<int>(OnSlotChanged);
+            var progress = new Progress<SequenceProgress>(OnSlotChanged);
             await _player.PlayAsync(slots, IsLoopMode, progress, _cts.Token);
         }
         finally

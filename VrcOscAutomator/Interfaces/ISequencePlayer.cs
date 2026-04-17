@@ -9,7 +9,7 @@ public interface ISequencePlayer : IDisposable
     int CurrentSlotIndex { get; }
 
     void SetKeyRepeatSettings(KeyRepeatSettings settings);
-    Task PlayAsync(IReadOnlyList<SequenceSlot> slots, bool loop, IProgress<int>? slotProgress, CancellationToken cancellationToken);
+    Task PlayAsync(IReadOnlyList<SequenceSlot> slots, bool loop, IProgress<SequenceProgress>? slotProgress, CancellationToken cancellationToken);
     Task PauseAsync();
     Task ResumeAsync();
     Task StopAsync();
