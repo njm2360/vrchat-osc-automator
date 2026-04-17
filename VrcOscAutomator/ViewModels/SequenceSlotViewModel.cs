@@ -134,11 +134,10 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
-    private string _typeText = string.Empty;
-
+    public partial string TypeText { get; set; } = string.Empty;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
-    private bool _appendNewline;
+    public partial bool AppendNewline { get; set; }
 
     // ── マウスボタン ──────────────────────────────────────────────────
 
@@ -147,14 +146,14 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsMouseButtonLeft))]
     [NotifyPropertyChangedFor(nameof(IsMouseButtonRight))]
     [NotifyPropertyChangedFor(nameof(IsMouseButtonMiddle))]
-    private MouseButton _selectedMouseButton = MouseButton.Left;
+    public partial MouseButton SelectedMouseButton { get; set; } = MouseButton.Left;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
     [NotifyPropertyChangedFor(nameof(IsMouseButtonActionPress))]
     [NotifyPropertyChangedFor(nameof(IsMouseButtonActionRelease))]
     [NotifyPropertyChangedFor(nameof(IsMouseButtonActionPressAndRelease))]
-    private KeyAction _selectedMouseButtonAction = KeyAction.Press;
+    public partial KeyAction SelectedMouseButtonAction { get; set; } = KeyAction.Press;
 
     public bool IsMouseButtonActionPress
     {
@@ -182,23 +181,23 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
-    private int _wheelClicks = 1;
+    public partial int WheelClicks { get; set; } = 1;
 
     // ── マウス移動 ────────────────────────────────────────────────────
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
-    private int _mouseMoveX;
+    public partial int MouseMoveX { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
-    private int _mouseMoveY;
+    public partial int MouseMoveY { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
     [NotifyPropertyChangedFor(nameof(IsMouseMoveRelative))]
     [NotifyPropertyChangedFor(nameof(IsMouseMoveAbsolute))]
-    private MouseMoveMode _selectedMouseMoveMode = MouseMoveMode.Relative;
+    public partial MouseMoveMode SelectedMouseMoveMode { get; set; } = MouseMoveMode.Relative;
 
     public bool IsMouseMoveRelative
     {
