@@ -4,7 +4,7 @@ namespace VrcOscAutomator.Interfaces;
 
 public interface IDialogService
 {
-    void ShowExportDialog(string base64);
+    void ShowExportDialog(string exportData);
 
     string? ShowImportDialog();
 

@@ -8,9 +8,9 @@ namespace VrcOscAutomator.Services;
 
 public sealed class DialogService : IDialogService
 {
-    public void ShowExportDialog(string base64)
+    public void ShowExportDialog(string exportData)
     {
-        ExportDialog dialog = new(base64) { Owner = Application.Current.MainWindow };
+        ExportDialog dialog = new(exportData) { Owner = Application.Current.MainWindow };
         dialog.ShowDialog();
     }
 

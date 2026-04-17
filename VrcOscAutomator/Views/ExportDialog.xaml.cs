@@ -4,10 +4,10 @@ namespace VrcOscAutomator.Views;
 
 public partial class ExportDialog : Window
 {
-    public ExportDialog(string base64)
+    public ExportDialog(string exportData)
     {
         InitializeComponent();
-        OutputTextBox.Text = base64;
+        OutputTextBox.Text = exportData;
     }
 
     private void CopyButton_Click(object sender, RoutedEventArgs e)
