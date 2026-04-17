@@ -83,7 +83,8 @@ public partial class MainWindow : Window
     private void TabControl_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
     {
         if (sender is TabControl tc &&
-            tc.Template.FindName("TabStripScrollViewer", tc) is ScrollViewer sv)
+            tc.Template.FindName("TabStripScrollViewer", tc) is ScrollViewer sv &&
+            sv.IsMouseOver)
         {
             sv.ScrollToHorizontalOffset(sv.HorizontalOffset - e.Delta / 3.0);
             e.Handled = true;
