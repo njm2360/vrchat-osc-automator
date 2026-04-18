@@ -7,6 +7,7 @@
         xmlns:conv="clr-namespace:VrcOscAutomator.Converters"
         xmlns:b="clr-namespace:VrcOscAutomator.Behaviors"
         Title="VRChat OSC Automator"
+        Icon="/Resources/icon.ico"
         Height="400" Width="600"
         MinHeight="400" MinWidth="600"
         ResizeMode="CanResize">

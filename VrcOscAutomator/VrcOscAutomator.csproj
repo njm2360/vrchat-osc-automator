@@ -10,10 +10,15 @@
     <RootNamespace>VrcOscAutomator</RootNamespace>
     <AssemblyName>VrcOscAutomator</AssemblyName>
     <Version>1.2.0</Version>
+    <ApplicationIcon>Resources\icon.ico</ApplicationIcon>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>false</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Resources\icon.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
