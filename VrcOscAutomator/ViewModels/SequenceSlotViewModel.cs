@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Text.RegularExpressions;
 using System.Windows.Data;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -22,7 +21,8 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
         view.GroupDescriptions.Add(new PropertyGroupDescription(nameof(SlotPreset.Category)));
         return view;
     }
-    public static IReadOnlyList<OscValueType> AvailableValueTypes => [OscValueType.Float, OscValueType.Int, OscValueType.Bool, OscValueType.String];
+
+    public static IReadOnlyList<OscValueType> AvailableValueTypes => [OscValueType.Int, OscValueType.Float, OscValueType.Bool, OscValueType.String];
     public static IReadOnlyList<VirtualKeyItem> AvailableKeys => VirtualKeyItem.All;
 
     [ObservableProperty]
@@ -43,7 +43,6 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsTransitionAvailable))]
     public partial SlotPreset SelectedPreset { get; set; } = SlotPreset.All[0];
 
-
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
     [NotifyPropertyChangedFor(nameof(IsFloatMode))]
@@ -51,54 +50,12 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsBoolMode))]
     [NotifyPropertyChangedFor(nameof(IsStringMode))]
     [NotifyPropertyChangedFor(nameof(IsTransitionAvailable))]
-    public partial OscValueType CustomValueType { get; set; } = OscValueType.Float;
-
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
-    public partial float FloatValue { get; set; }
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsTransitionMode))]
-    [NotifyPropertyChangedFor(nameof(IsFixedValueMode))]
-    [NotifyPropertyChangedFor(nameof(SelectedTransitionModeIndex))]
-    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
-    public partial TransitionMode TransitionMode { get; set; } = TransitionMode.None;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
-    public partial float FloatTransitionFrom { get; set; } = 0f;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
-    public partial float FloatTransitionTo { get; set; } = 1f;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
-    public partial int IntTransitionFrom { get; set; } = 0;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
-    public partial int IntTransitionTo { get; set; } = 1;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
-    [NotifyPropertyChangedFor(nameof(IsValueOn))]
-    [NotifyPropertyChangedFor(nameof(IsValueOff))]
-    public partial int IntValue { get; set; }
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
-    public partial bool BoolValue { get; set; }
-
+    public partial OscValueType CustomValueType { get; set; } = OscValueType.Int;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
     [NotifyPropertyChangedFor(nameof(IsValid))]
     public partial string CustomAddress { get; set; } = string.Empty;
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
-    public partial string StringValue { get; set; } = "";
 
     [ObservableProperty]
     public partial int DurationMs { get; set; } = 500;
@@ -117,7 +74,6 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
     public partial int RepeatCount { get; set; } = 2;
 
-
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
     public partial int RandomWaitMinMs { get; set; } = 300;
@@ -126,150 +82,9 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
     public partial int RandomWaitMaxMs { get; set; } = 1000;
 
-    // ── キーボード (単押し) ────────────────────────────────────────────
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
-    public partial VirtualKeyItem SelectedKey { get; set; } = VirtualKeyItem.All[0];
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
-    [NotifyPropertyChangedFor(nameof(IsKeyActionPress))]
-    [NotifyPropertyChangedFor(nameof(IsKeyActionRelease))]
-    [NotifyPropertyChangedFor(nameof(IsKeyActionPressAndRelease))]
-    public partial KeyAction SelectedKeyAction { get; set; } = KeyAction.Press;
-
-    /// <summary>RadioButton バインディング用。</summary>
-    public bool IsKeyActionPress
-    {
-        get => SelectedKeyAction == KeyAction.Press;
-        set { if (value) SelectedKeyAction = KeyAction.Press; }
-    }
-
-    public bool IsKeyActionRelease
-    {
-        get => SelectedKeyAction == KeyAction.Release;
-        set { if (value) SelectedKeyAction = KeyAction.Release; }
-    }
-
-    public bool IsKeyActionPressAndRelease
-    {
-        get => SelectedKeyAction == KeyAction.PressAndRelease;
-        set { if (value) SelectedKeyAction = KeyAction.PressAndRelease; }
-    }
-
-    // ── キーボード (文字入力) ─────────────────────────────────────────
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
-    public partial string TypeText { get; set; } = string.Empty;
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
-    public partial bool AppendNewline { get; set; }
-
-    // ── マウスボタン ──────────────────────────────────────────────────
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
-    [NotifyPropertyChangedFor(nameof(IsMouseButtonLeft))]
-    [NotifyPropertyChangedFor(nameof(IsMouseButtonRight))]
-    [NotifyPropertyChangedFor(nameof(IsMouseButtonMiddle))]
-    public partial MouseButton SelectedMouseButton { get; set; } = MouseButton.Left;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
-    [NotifyPropertyChangedFor(nameof(IsMouseButtonActionPress))]
-    [NotifyPropertyChangedFor(nameof(IsMouseButtonActionRelease))]
-    [NotifyPropertyChangedFor(nameof(IsMouseButtonActionPressAndRelease))]
-    public partial KeyAction SelectedMouseButtonAction { get; set; } = KeyAction.Press;
-
-    public bool IsMouseButtonActionPress
-    {
-        get => SelectedMouseButtonAction == KeyAction.Press;
-        set { if (value) SelectedMouseButtonAction = KeyAction.Press; }
-    }
-
-    public bool IsMouseButtonActionRelease
-    {
-        get => SelectedMouseButtonAction == KeyAction.Release;
-        set { if (value) SelectedMouseButtonAction = KeyAction.Release; }
-    }
-
-    public bool IsMouseButtonActionPressAndRelease
-    {
-        get => SelectedMouseButtonAction == KeyAction.PressAndRelease;
-        set { if (value) SelectedMouseButtonAction = KeyAction.PressAndRelease; }
-    }
-
-    public bool IsMouseButtonLeft { get => SelectedMouseButton == MouseButton.Left; set { if (value) SelectedMouseButton = MouseButton.Left; } }
-    public bool IsMouseButtonRight { get => SelectedMouseButton == MouseButton.Right; set { if (value) SelectedMouseButton = MouseButton.Right; } }
-    public bool IsMouseButtonMiddle { get => SelectedMouseButton == MouseButton.Middle; set { if (value) SelectedMouseButton = MouseButton.Middle; } }
-
-    // ── マウスホイール ────────────────────────────────────────────────
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
-    public partial int WheelClicks { get; set; } = 1;
-
-    // ── マウス移動 ────────────────────────────────────────────────────
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
-    public partial int MouseMoveX { get; set; }
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
-    public partial int MouseMoveY { get; set; }
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
-    [NotifyPropertyChangedFor(nameof(IsMouseMoveRelative))]
-    [NotifyPropertyChangedFor(nameof(IsMouseMoveAbsolute))]
-    public partial MouseMoveMode SelectedMouseMoveMode { get; set; } = MouseMoveMode.Relative;
-
-    public bool IsMouseMoveRelative
-    {
-        get => SelectedMouseMoveMode == MouseMoveMode.Relative;
-        set { if (value) SelectedMouseMoveMode = MouseMoveMode.Relative; }
-    }
-
-    public bool IsMouseMoveAbsolute
-    {
-        get => SelectedMouseMoveMode == MouseMoveMode.Absolute;
-        set { if (value) SelectedMouseMoveMode = MouseMoveMode.Absolute; }
-    }
-
-    /// <summary>Int プリセットの ON/OFF ラジオボタン用プロパティ。</summary>
-    public bool IsValueOn
-    {
-        get => IntValue == 1;
-        set { if (value) IntValue = 1; }
-    }
-
-    public bool IsValueOff
-    {
-        get => IntValue == 0;
-        set { if (value) IntValue = 0; }
-    }
-
-    public bool IsTransitionAvailable =>
-        SelectedPreset is CustomPreset && CustomValueType is OscValueType.Float or OscValueType.Int;
-
-    public bool IsTransitionMode => TransitionMode != TransitionMode.None;
-    public bool IsFixedValueMode => TransitionMode == TransitionMode.None;
-
-    public int SelectedTransitionModeIndex
-    {
-        get => (int)TransitionMode;
-        set => TransitionMode = (TransitionMode)value;
-    }
-
     public bool IsValid => SelectedPreset is not CustomPreset || OscAddressRegex().IsMatch(CustomAddress);
-
     public bool ShowResetOption => SelectedPreset is BuiltinPreset;
-
     public bool IsDurationEditable => SelectedPreset is not (LoopBeginPreset or LoopEndPreset or BreakpointPreset or RandomWaitPreset);
-
     public bool IsRandomWaitMode => SelectedPreset is RandomWaitPreset;
     public bool IsKeyboardSingleMode => SelectedPreset is KeySinglePreset;
     public bool IsKeyboardTypeStringMode => SelectedPreset is KeyTypeStringPreset;
@@ -311,7 +126,7 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
                                ? $"{CustomAddress} [{CustomValueType}] = {ValueSummary}"
                                : $"(アドレス未設定) [{CustomValueType}] = {ValueSummary}",
         BuiltinPreset { ValueType: OscValueType.Int } => IntValue == 1 ? "1 (ON)" : "0 (OFF)",
-        _ => $"{FloatValue:F2}",
+        _ => $"{FloatValue:0.##}",
     };
 
     private static string Truncate(string s, int max) => s.Length <= max ? s : s[..max] + "…";
@@ -323,149 +138,4 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
         MouseButton.Middle => "中ボタン",
         _ => "?",
     };
-
-    private string ValueSummary => CustomValueType switch
-    {
-        OscValueType.Float when IsTransitionMode =>
-            $"{FloatTransitionFrom:F3} → {FloatTransitionTo:F3} [{TransitionModeLabel(TransitionMode)}]",
-        OscValueType.Int when IsTransitionMode =>
-            $"{IntTransitionFrom} → {IntTransitionTo} [{TransitionModeLabel(TransitionMode)}]",
-        OscValueType.Int => $"{IntValue}",
-        OscValueType.Bool => BoolValue ? "true" : "false",
-        OscValueType.String => $"\"{StringValue}\"",
-        _ => $"{FloatValue:F3}",
-    };
-
-    private static string TransitionModeLabel(TransitionMode mode) => mode switch
-    {
-        TransitionMode.Linear => "Linear",
-        TransitionMode.EaseIn => "EaseIn",
-        TransitionMode.EaseOut => "EaseOut",
-        TransitionMode.EaseInOut => "EaseInOut",
-        _ => "",
-    };
-
-    partial void OnCustomValueTypeChanged(OscValueType value)
-    {
-        if (value is not OscValueType.Float and not OscValueType.Int)
-            TransitionMode = TransitionMode.None;
-    }
-
-    partial void OnSelectedPresetChanged(SlotPreset value)
-    {
-        if (value is not CustomPreset)
-            TransitionMode = TransitionMode.None;
-    }
-
-    public SequenceSlot ToModel() => SelectedPreset switch
-    {
-        LoopBeginPreset => new LoopBeginSlot(RepeatCount),
-        LoopEndPreset => new LoopEndSlot(),
-        WaitPreset => new WaitSlot(DurationMs),
-        RandomWaitPreset => new RandomWaitSlot(RandomWaitMinMs, RandomWaitMaxMs),
-        BreakpointPreset => new BreakpointSlot(),
-        KeySinglePreset => new KeySingleSlot(SelectedKey.Code, SelectedKeyAction, DurationMs),
-        KeyTypeStringPreset => new KeyTypeStringSlot(TypeText, AppendNewline, DurationMs),
-        MouseButtonPreset => new MouseButtonSlot(SelectedMouseButton, SelectedMouseButtonAction, DurationMs),
-        MouseWheelPreset => new MouseWheelSlot(WheelClicks, DurationMs),
-        MouseMovePreset => new MouseMoveSlot(MouseMoveX, MouseMoveY, SelectedMouseMoveMode, DurationMs),
-        BuiltinPreset bp => OscSlot(bp.Address, bp.ValueType),
-        CustomPreset => OscSlot(CustomAddress, CustomValueType),
-        _ => throw new UnreachableException(),
-    };
-
-    private SequenceSlot OscSlot(string address, OscValueType vt) => vt switch
-    {
-        OscValueType.Int => new IntSlot(address, IntValue, DurationMs, ResetOnComplete,
-            TransitionMode, IntTransitionFrom, IntTransitionTo),
-        OscValueType.Bool => new BoolSlot(address, BoolValue, DurationMs, ResetOnComplete),
-        OscValueType.String => new StringSlot(address, StringValue, DurationMs, ResetOnComplete),
-        _ => new FloatSlot(address, FloatValue, DurationMs, ResetOnComplete,
-            TransitionMode, FloatTransitionFrom, FloatTransitionTo),
-    };
-
-    public static SequenceSlotViewModel FromModel(SequenceSlot slot) => slot switch
-    {
-        LoopBeginSlot lb => new() { SelectedPreset = SlotPreset.All.OfType<LoopBeginPreset>().First(), RepeatCount = lb.RepeatCount },
-        LoopEndSlot => new() { SelectedPreset = SlotPreset.All.OfType<LoopEndPreset>().First() },
-        WaitSlot w => new() { SelectedPreset = SlotPreset.All.OfType<WaitPreset>().First(), DurationMs = w.DurationMs },
-        RandomWaitSlot rw => new()
-        {
-            SelectedPreset = SlotPreset.All.OfType<RandomWaitPreset>().First(),
-            RandomWaitMinMs = rw.MinMs,
-            RandomWaitMaxMs = rw.MaxMs,
-        },
-        BreakpointSlot => new() { SelectedPreset = SlotPreset.All.OfType<BreakpointPreset>().First() },
-        KeySingleSlot ks => new()
-        {
-            SelectedPreset = SlotPreset.All.OfType<KeySinglePreset>().First(),
-            SelectedKey = VirtualKeyItem.All.FirstOrDefault(k => k.Code == ks.VirtualKey) ?? VirtualKeyItem.All[0],
-            SelectedKeyAction = ks.Action,
-            DurationMs = ks.DurationMs,
-        },
-        KeyTypeStringSlot kts => new()
-        {
-            SelectedPreset = SlotPreset.All.OfType<KeyTypeStringPreset>().First(),
-            TypeText = kts.Text,
-            AppendNewline = kts.AppendNewline,
-            DurationMs = kts.DurationMs,
-        },
-        MouseButtonSlot mb => new()
-        {
-            SelectedPreset = SlotPreset.All.OfType<MouseButtonPreset>().First(),
-            SelectedMouseButton = mb.Button,
-            SelectedMouseButtonAction = mb.Action,
-            DurationMs = mb.DurationMs,
-        },
-        MouseWheelSlot mw => new()
-        {
-            SelectedPreset = SlotPreset.All.OfType<MouseWheelPreset>().First(),
-            WheelClicks = mw.Clicks,
-            DurationMs = mw.DurationMs,
-        },
-        MouseMoveSlot mm => new()
-        {
-            SelectedPreset = SlotPreset.All.OfType<MouseMovePreset>().First(),
-            MouseMoveX = mm.X,
-            MouseMoveY = mm.Y,
-            SelectedMouseMoveMode = mm.Mode,
-            DurationMs = mm.DurationMs,
-        },
-        FloatSlot f => BuildOscVm(f.Address, OscValueType.Float, floatVal: f.Value, durationMs: f.DurationMs, resetOnComplete: f.ResetOnComplete,
-            transitionMode: f.TransitionMode, floatFromVal: f.TransitionFromValue, floatToVal: f.TransitionToValue),
-        IntSlot n => BuildOscVm(n.Address, OscValueType.Int, intVal: n.Value, durationMs: n.DurationMs, resetOnComplete: n.ResetOnComplete,
-            transitionMode: n.TransitionMode, intFromVal: n.TransitionFromValue, intToVal: n.TransitionToValue),
-        BoolSlot b => BuildOscVm(b.Address, OscValueType.Bool, boolVal: b.Value, durationMs: b.DurationMs, resetOnComplete: b.ResetOnComplete),
-        StringSlot s => BuildOscVm(s.Address, OscValueType.String, strVal: s.Value, durationMs: s.DurationMs, resetOnComplete: s.ResetOnComplete),
-        _ => throw new ArgumentOutOfRangeException(nameof(slot)),
-    };
-
-    private static SequenceSlotViewModel BuildOscVm(
-        string address, OscValueType vt,
-        float floatVal = 0f, int intVal = 0, bool boolVal = false,
-        string? strVal = null, int durationMs = 500, bool resetOnComplete = true,
-        TransitionMode transitionMode = TransitionMode.None,
-        float floatFromVal = 0f, float floatToVal = 1f,
-        int intFromVal = 0, int intToVal = 1)
-    {
-        SlotPreset preset = SlotPreset.All.FirstOrDefault(p => p is BuiltinPreset bp && bp.Address == address)
-                         ?? SlotPreset.All.First(p => p is CustomPreset);
-        return new()
-        {
-            SelectedPreset = preset,
-            FloatValue = floatVal,
-            IntValue = intVal,
-            BoolValue = boolVal,
-            StringValue = preset is CustomPreset ? (strVal ?? string.Empty) : string.Empty,
-            CustomValueType = preset is CustomPreset ? vt : OscValueType.Float,
-            CustomAddress = preset is CustomPreset ? address : string.Empty,
-            DurationMs = durationMs,
-            ResetOnComplete = resetOnComplete,
-            TransitionMode = preset is CustomPreset ? transitionMode : TransitionMode.None,
-            FloatTransitionFrom = floatFromVal,
-            FloatTransitionTo = floatToVal,
-            IntTransitionFrom = intFromVal,
-            IntTransitionTo = intToVal,
-        };
-    }
 }

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using VrcOscAutomator.Interfaces;
 using VrcOscAutomator.Models;
 
@@ -310,7 +311,7 @@ public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender 
         {
             FloatSlot f => f.TransitionMode,
             IntSlot n => n.TransitionMode,
-            _ => TransitionMode.Linear,
+            _ => throw new UnreachableException(),
         };
 
         SendTransitionValue(slot, 0f, mode);
@@ -320,19 +321,8 @@ public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender 
         {
             stopCt.ThrowIfCancellationRequested();
 
-            if (IsPaused)
-            {
-                ResetSlotValue(slot);
-                _activeSlot = null;
-                ReleaseAllInputs();
-                await _resumeSignal.WaitAsync(stopCt);
-                _activeSlot = slot;
-                RepressAllInputs();
-                SendTransitionValue(slot, (float)elapsed / totalMs, mode);
-            }
-
             int stepMs = Math.Min(StepMs, totalMs - elapsed);
-            var pauseCts = CancellationTokenSource.CreateLinkedTokenSource(stopCt);
+            CancellationTokenSource pauseCts = CancellationTokenSource.CreateLinkedTokenSource(stopCt);
             _pauseCts = pauseCts;
             if (IsPaused) pauseCts.Cancel();
 
@@ -349,6 +339,17 @@ public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender 
                 elapsed += (int)Math.Min(Environment.TickCount64 - startTick, (long)stepMs);
                 _pauseCts = null;
                 pauseCts.Dispose();
+
+                if (elapsed < totalMs)
+                {
+                    ResetSlotValue(slot);
+                    _activeSlot = null;
+                    ReleaseAllInputs();
+                    await _resumeSignal.WaitAsync(stopCt);
+                    _activeSlot = slot;
+                    RepressAllInputs();
+                    SendTransitionValue(slot, (float)elapsed / totalMs, mode);
+                }
                 continue;
             }
 
