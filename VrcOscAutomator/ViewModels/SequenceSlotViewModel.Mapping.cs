@@ -27,11 +27,15 @@ public sealed partial class SequenceSlotViewModel
     private SequenceSlot OscSlot(string address, OscValueType vt) => vt switch
     {
         OscValueType.Int => new IntSlot(address, IntValue, DurationMs, ResetOnComplete,
-            TransitionMode, IntTransitionFrom, IntTransitionTo),
+            TransitionMode,
+            TransitionMode != TransitionMode.None ? IntTransitionFrom : null,
+            TransitionMode != TransitionMode.None ? IntTransitionTo : null),
         OscValueType.Bool => new BoolSlot(address, BoolValue, DurationMs, ResetOnComplete),
         OscValueType.String => new StringSlot(address, StringValue, DurationMs, ResetOnComplete),
         _ => new FloatSlot(address, FloatValue, DurationMs, ResetOnComplete,
-            TransitionMode, FloatTransitionFrom, FloatTransitionTo),
+            TransitionMode,
+            TransitionMode != TransitionMode.None ? FloatTransitionFrom : null,
+            TransitionMode != TransitionMode.None ? FloatTransitionTo : null),
     };
 
     // SequenceSlot → VM
@@ -83,9 +87,9 @@ public sealed partial class SequenceSlotViewModel
             DurationMs = mm.DurationMs,
         },
         FloatSlot f => BuildOscVm(f.Address, OscValueType.Float, floatVal: f.Value, durationMs: f.DurationMs, resetOnComplete: f.ResetOnComplete,
-            transitionMode: f.TransitionMode, floatFromVal: f.TransitionFromValue, floatToVal: f.TransitionToValue),
+            transitionMode: f.TransitionMode, floatFromVal: f.TransitionFromValue ?? 0f, floatToVal: f.TransitionToValue ?? 1f),
         IntSlot n => BuildOscVm(n.Address, OscValueType.Int, intVal: n.Value, durationMs: n.DurationMs, resetOnComplete: n.ResetOnComplete,
-            transitionMode: n.TransitionMode, intFromVal: n.TransitionFromValue, intToVal: n.TransitionToValue),
+            transitionMode: n.TransitionMode, intFromVal: n.TransitionFromValue ?? 0, intToVal: n.TransitionToValue ?? 1),
         BoolSlot b => BuildOscVm(b.Address, OscValueType.Bool, boolVal: b.Value, durationMs: b.DurationMs, resetOnComplete: b.ResetOnComplete),
         StringSlot s => BuildOscVm(s.Address, OscValueType.String, strVal: s.Value, durationMs: s.DurationMs, resetOnComplete: s.ResetOnComplete),
         _ => throw new ArgumentOutOfRangeException(nameof(slot)),

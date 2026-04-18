@@ -38,8 +38,8 @@ public record FloatSlot(
     int DurationMs = 500,
     bool ResetOnComplete = true,
     TransitionMode TransitionMode = TransitionMode.None,
-    float TransitionFromValue = 0f,
-    float TransitionToValue = 1f) : OscSlot(Address, DurationMs, ResetOnComplete);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] float? TransitionFromValue = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] float? TransitionToValue = null) : OscSlot(Address, DurationMs, ResetOnComplete);
 
 /// <summary>Int 値を送信するスロット</summary>
 public record IntSlot(
@@ -48,8 +48,8 @@ public record IntSlot(
     int DurationMs = 500,
     bool ResetOnComplete = true,
     TransitionMode TransitionMode = TransitionMode.None,
-    int TransitionFromValue = 0,
-    int TransitionToValue = 1) : OscSlot(Address, DurationMs, ResetOnComplete);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? TransitionFromValue = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? TransitionToValue = null) : OscSlot(Address, DurationMs, ResetOnComplete);
 
 public enum TransitionMode { None, Linear, EaseIn, EaseOut, EaseInOut }
 

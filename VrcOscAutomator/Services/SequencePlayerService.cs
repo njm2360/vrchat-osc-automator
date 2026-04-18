@@ -370,10 +370,10 @@ public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender 
         switch (slot)
         {
             case FloatSlot f:
-                oscSender.SendFloat(f.Address, f.TransitionFromValue + (f.TransitionToValue - f.TransitionFromValue) * eased);
+                oscSender.SendFloat(f.Address, f.TransitionFromValue!.Value + (f.TransitionToValue!.Value - f.TransitionFromValue!.Value) * eased);
                 break;
             case IntSlot n:
-                oscSender.SendInt(n.Address, (int)Math.Round(n.TransitionFromValue + (double)(n.TransitionToValue - n.TransitionFromValue) * eased));
+                oscSender.SendInt(n.Address, (int)Math.Round(n.TransitionFromValue!.Value + (double)(n.TransitionToValue!.Value - n.TransitionFromValue!.Value) * eased));
                 break;
         }
     }
