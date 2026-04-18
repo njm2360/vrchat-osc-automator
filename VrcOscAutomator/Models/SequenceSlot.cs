@@ -31,19 +31,27 @@ public abstract record OscSlot(
     public override int GetDurationMs() => DurationMs;
 }
 
-/// <summary>Float 値を送信するスロット（-1.0〜+1.0）。</summary>
+/// <summary>Float 値を送信するスロット</summary>
 public record FloatSlot(
     string Address,
     float Value,
     int DurationMs = 500,
-    bool ResetOnComplete = true) : OscSlot(Address, DurationMs, ResetOnComplete);
+    bool ResetOnComplete = true,
+    TransitionMode TransitionMode = TransitionMode.None,
+    float TransitionFromValue = 0f,
+    float TransitionToValue = 1f) : OscSlot(Address, DurationMs, ResetOnComplete);
 
-/// <summary>Int 値を送信するスロット（0 / 1）。</summary>
+/// <summary>Int 値を送信するスロット</summary>
 public record IntSlot(
     string Address,
     int Value,
     int DurationMs = 500,
-    bool ResetOnComplete = true) : OscSlot(Address, DurationMs, ResetOnComplete);
+    bool ResetOnComplete = true,
+    TransitionMode TransitionMode = TransitionMode.None,
+    int TransitionFromValue = 0,
+    int TransitionToValue = 1) : OscSlot(Address, DurationMs, ResetOnComplete);
+
+public enum TransitionMode { None, Linear, EaseIn, EaseOut, EaseInOut }
 
 /// <summary>Bool 値を送信するスロット。</summary>
 public record BoolSlot(

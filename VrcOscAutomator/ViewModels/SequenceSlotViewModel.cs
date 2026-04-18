@@ -1,4 +1,3 @@
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 using System.Windows.Data;
@@ -41,6 +40,7 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsRandomWaitMode))]
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
     [NotifyPropertyChangedFor(nameof(IsValid))]
+    [NotifyPropertyChangedFor(nameof(IsTransitionAvailable))]
     public partial SlotPreset SelectedPreset { get; set; } = SlotPreset.All[0];
 
 
@@ -50,12 +50,36 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsIntMode))]
     [NotifyPropertyChangedFor(nameof(IsBoolMode))]
     [NotifyPropertyChangedFor(nameof(IsStringMode))]
+    [NotifyPropertyChangedFor(nameof(IsTransitionAvailable))]
     public partial OscValueType CustomValueType { get; set; } = OscValueType.Float;
 
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
     public partial float FloatValue { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsTransitionMode))]
+    [NotifyPropertyChangedFor(nameof(IsFixedValueMode))]
+    [NotifyPropertyChangedFor(nameof(SelectedTransitionModeIndex))]
+    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
+    public partial TransitionMode TransitionMode { get; set; } = TransitionMode.None;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
+    public partial float FloatTransitionFrom { get; set; } = 0f;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
+    public partial float FloatTransitionTo { get; set; } = 1f;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
+    public partial int IntTransitionFrom { get; set; } = 0;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ParameterSummary))]
+    public partial int IntTransitionTo { get; set; } = 1;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
@@ -106,14 +130,14 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
-    private VirtualKeyItem _selectedKey = VirtualKeyItem.All[0];
+    public partial VirtualKeyItem SelectedKey { get; set; } = VirtualKeyItem.All[0];
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
     [NotifyPropertyChangedFor(nameof(IsKeyActionPress))]
     [NotifyPropertyChangedFor(nameof(IsKeyActionRelease))]
     [NotifyPropertyChangedFor(nameof(IsKeyActionPressAndRelease))]
-    private KeyAction _selectedKeyAction = KeyAction.Press;
+    public partial KeyAction SelectedKeyAction { get; set; } = KeyAction.Press;
 
     /// <summary>RadioButton バインディング用。</summary>
     public bool IsKeyActionPress
@@ -228,6 +252,18 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
         set { if (value) IntValue = 0; }
     }
 
+    public bool IsTransitionAvailable =>
+        SelectedPreset is CustomPreset && CustomValueType is OscValueType.Float or OscValueType.Int;
+
+    public bool IsTransitionMode => TransitionMode != TransitionMode.None;
+    public bool IsFixedValueMode => TransitionMode == TransitionMode.None;
+
+    public int SelectedTransitionModeIndex
+    {
+        get => (int)TransitionMode;
+        set => TransitionMode = (TransitionMode)value;
+    }
+
     public bool IsValid => SelectedPreset is not CustomPreset || OscAddressRegex().IsMatch(CustomAddress);
 
     public bool ShowResetOption => SelectedPreset is BuiltinPreset;
@@ -290,11 +326,36 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
 
     private string ValueSummary => CustomValueType switch
     {
+        OscValueType.Float when IsTransitionMode =>
+            $"{FloatTransitionFrom:F3} → {FloatTransitionTo:F3} [{TransitionModeLabel(TransitionMode)}]",
+        OscValueType.Int when IsTransitionMode =>
+            $"{IntTransitionFrom} → {IntTransitionTo} [{TransitionModeLabel(TransitionMode)}]",
         OscValueType.Int => $"{IntValue}",
         OscValueType.Bool => BoolValue ? "true" : "false",
         OscValueType.String => $"\"{StringValue}\"",
         _ => $"{FloatValue:F3}",
     };
+
+    private static string TransitionModeLabel(TransitionMode mode) => mode switch
+    {
+        TransitionMode.Linear => "Linear",
+        TransitionMode.EaseIn => "EaseIn",
+        TransitionMode.EaseOut => "EaseOut",
+        TransitionMode.EaseInOut => "EaseInOut",
+        _ => "",
+    };
+
+    partial void OnCustomValueTypeChanged(OscValueType value)
+    {
+        if (value is not OscValueType.Float and not OscValueType.Int)
+            TransitionMode = TransitionMode.None;
+    }
+
+    partial void OnSelectedPresetChanged(SlotPreset value)
+    {
+        if (value is not CustomPreset)
+            TransitionMode = TransitionMode.None;
+    }
 
     public SequenceSlot ToModel() => SelectedPreset switch
     {
@@ -315,10 +376,12 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
 
     private SequenceSlot OscSlot(string address, OscValueType vt) => vt switch
     {
-        OscValueType.Int => new IntSlot(address, IntValue, DurationMs, ResetOnComplete),
+        OscValueType.Int => new IntSlot(address, IntValue, DurationMs, ResetOnComplete,
+            TransitionMode, IntTransitionFrom, IntTransitionTo),
         OscValueType.Bool => new BoolSlot(address, BoolValue, DurationMs, ResetOnComplete),
         OscValueType.String => new StringSlot(address, StringValue, DurationMs, ResetOnComplete),
-        _ => new FloatSlot(address, FloatValue, DurationMs, ResetOnComplete),
+        _ => new FloatSlot(address, FloatValue, DurationMs, ResetOnComplete,
+            TransitionMode, FloatTransitionFrom, FloatTransitionTo),
     };
 
     public static SequenceSlotViewModel FromModel(SequenceSlot slot) => slot switch
@@ -368,8 +431,10 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
             SelectedMouseMoveMode = mm.Mode,
             DurationMs = mm.DurationMs,
         },
-        FloatSlot f => BuildOscVm(f.Address, OscValueType.Float, floatVal: f.Value, durationMs: f.DurationMs, resetOnComplete: f.ResetOnComplete),
-        IntSlot n => BuildOscVm(n.Address, OscValueType.Int, intVal: n.Value, durationMs: n.DurationMs, resetOnComplete: n.ResetOnComplete),
+        FloatSlot f => BuildOscVm(f.Address, OscValueType.Float, floatVal: f.Value, durationMs: f.DurationMs, resetOnComplete: f.ResetOnComplete,
+            transitionMode: f.TransitionMode, floatFromVal: f.TransitionFromValue, floatToVal: f.TransitionToValue),
+        IntSlot n => BuildOscVm(n.Address, OscValueType.Int, intVal: n.Value, durationMs: n.DurationMs, resetOnComplete: n.ResetOnComplete,
+            transitionMode: n.TransitionMode, intFromVal: n.TransitionFromValue, intToVal: n.TransitionToValue),
         BoolSlot b => BuildOscVm(b.Address, OscValueType.Bool, boolVal: b.Value, durationMs: b.DurationMs, resetOnComplete: b.ResetOnComplete),
         StringSlot s => BuildOscVm(s.Address, OscValueType.String, strVal: s.Value, durationMs: s.DurationMs, resetOnComplete: s.ResetOnComplete),
         _ => throw new ArgumentOutOfRangeException(nameof(slot)),
@@ -378,7 +443,10 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
     private static SequenceSlotViewModel BuildOscVm(
         string address, OscValueType vt,
         float floatVal = 0f, int intVal = 0, bool boolVal = false,
-        string? strVal = null, int durationMs = 500, bool resetOnComplete = true)
+        string? strVal = null, int durationMs = 500, bool resetOnComplete = true,
+        TransitionMode transitionMode = TransitionMode.None,
+        float floatFromVal = 0f, float floatToVal = 1f,
+        int intFromVal = 0, int intToVal = 1)
     {
         SlotPreset preset = SlotPreset.All.FirstOrDefault(p => p is BuiltinPreset bp && bp.Address == address)
                          ?? SlotPreset.All.First(p => p is CustomPreset);
@@ -393,6 +461,11 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
             CustomAddress = preset is CustomPreset ? address : string.Empty,
             DurationMs = durationMs,
             ResetOnComplete = resetOnComplete,
+            TransitionMode = preset is CustomPreset ? transitionMode : TransitionMode.None,
+            FloatTransitionFrom = floatFromVal,
+            FloatTransitionTo = floatToVal,
+            IntTransitionFrom = intFromVal,
+            IntTransitionTo = intToVal,
         };
     }
 }

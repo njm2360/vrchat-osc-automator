@@ -122,11 +122,14 @@ public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender 
                     slotProgress?.Report(new SequenceProgress(i, BuildLoopIterations(loopStack)));
 
                     OscSlot? activeOsc = slot as OscSlot;
+                    bool isTransition = activeOsc is FloatSlot { TransitionMode: not TransitionMode.None }
+                                                  or IntSlot { TransitionMode: not TransitionMode.None };
 
                     if (activeOsc is not null)
                     {
                         _activeSlot = activeOsc;
-                        SendCommand(activeOsc);
+                        if (!isTransition)
+                            SendCommand(activeOsc);
                     }
 
                     switch (slot)
@@ -176,7 +179,10 @@ public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender 
                             break;
                     }
 
-                    await SlotDelayAsync(activeOsc, slot.GetDurationMs(), stopCt);
+                    if (isTransition)
+                        await SendTransitionAsync(activeOsc!, stopCt);
+                    else
+                        await SlotDelayAsync(activeOsc, slot.GetDurationMs(), stopCt);
 
                     FlushPendingReleases();
 
@@ -293,6 +299,81 @@ public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender 
             case IntSlot n: oscSender.SendInt(n.Address, n.Value); break;
             case BoolSlot b: oscSender.SendBool(b.Address, b.Value); break;
             case StringSlot s: oscSender.SendString(s.Address, s.Value); break;
+        }
+    }
+
+    private async Task SendTransitionAsync(OscSlot slot, CancellationToken stopCt)
+    {
+        const int StepMs = 50;
+        int totalMs = slot.GetDurationMs();
+        TransitionMode mode = slot switch
+        {
+            FloatSlot f => f.TransitionMode,
+            IntSlot n => n.TransitionMode,
+            _ => TransitionMode.Linear,
+        };
+
+        SendTransitionValue(slot, 0f, mode);
+
+        int elapsed = 0;
+        while (elapsed < totalMs)
+        {
+            stopCt.ThrowIfCancellationRequested();
+
+            if (IsPaused)
+            {
+                ResetSlotValue(slot);
+                _activeSlot = null;
+                ReleaseAllInputs();
+                await _resumeSignal.WaitAsync(stopCt);
+                _activeSlot = slot;
+                RepressAllInputs();
+                SendTransitionValue(slot, (float)elapsed / totalMs, mode);
+            }
+
+            int stepMs = Math.Min(StepMs, totalMs - elapsed);
+            var pauseCts = CancellationTokenSource.CreateLinkedTokenSource(stopCt);
+            _pauseCts = pauseCts;
+            if (IsPaused) pauseCts.Cancel();
+
+            long startTick = Environment.TickCount64;
+            try
+            {
+                await Task.Delay(stepMs, pauseCts.Token);
+                _pauseCts = null;
+                pauseCts.Dispose();
+                elapsed += stepMs;
+            }
+            catch (OperationCanceledException) when (!stopCt.IsCancellationRequested)
+            {
+                elapsed += (int)Math.Min(Environment.TickCount64 - startTick, (long)stepMs);
+                _pauseCts = null;
+                pauseCts.Dispose();
+                continue;
+            }
+
+            float t = elapsed >= totalMs ? 1f : (float)elapsed / totalMs;
+            SendTransitionValue(slot, t, mode);
+        }
+    }
+
+    private void SendTransitionValue(OscSlot slot, float t, TransitionMode mode)
+    {
+        float eased = mode switch
+        {
+            TransitionMode.EaseIn => t * t,
+            TransitionMode.EaseOut => 1f - (1f - t) * (1f - t),
+            TransitionMode.EaseInOut => t < 0.5f ? 2f * t * t : 1f - MathF.Pow(-2f * t + 2f, 2f) / 2f,
+            _ => t,
+        };
+        switch (slot)
+        {
+            case FloatSlot f:
+                oscSender.SendFloat(f.Address, f.TransitionFromValue + (f.TransitionToValue - f.TransitionFromValue) * eased);
+                break;
+            case IntSlot n:
+                oscSender.SendInt(n.Address, (int)Math.Round(n.TransitionFromValue + (double)(n.TransitionToValue - n.TransitionFromValue) * eased));
+                break;
         }
     }
 
