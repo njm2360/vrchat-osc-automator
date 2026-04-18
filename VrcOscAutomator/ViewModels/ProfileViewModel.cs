@@ -44,11 +44,26 @@ public sealed partial class ProfileViewModel : ObservableObject
 
     // DataGrid で選択中のスロット（null = 未選択）
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(RemoveSlotCommand))]
-    [NotifyCanExecuteChangedFor(nameof(CopySlotCommand))]
-    [NotifyCanExecuteChangedFor(nameof(MoveUpCommand))]
-    [NotifyCanExecuteChangedFor(nameof(MoveDownCommand))]
     public partial SequenceSlotViewModel? SelectedSlot { get; set; }
+
+    // SelectedSlot変更時に_selectedSlotsを単一選択として同期
+    partial void OnSelectedSlotChanged(SequenceSlotViewModel? value)
+    {
+        _selectedSlots = value is null ? [] : [value];
+        NotifySelectionCommandsCanExecute();
+    }
+
+    // DataGridの複数選択（code-behindからSetSelectedSlotsで更新）
+    private IReadOnlyList<SequenceSlotViewModel> _selectedSlots = [];
+
+    // コピー後などにプログラムから複数選択を要求するイベント
+    public event EventHandler<IList<SequenceSlotViewModel>>? SelectionRequested;
+
+    public void SetSelectedSlots(IReadOnlyList<SequenceSlotViewModel> slots)
+    {
+        _selectedSlots = slots;
+        NotifySelectionCommandsCanExecute();
+    }
 
     public ObservableCollection<SequenceSlotViewModel> Slots { get; }
 
@@ -84,8 +99,8 @@ public sealed partial class ProfileViewModel : ObservableObject
     private void AddSlot()
     {
         var newSlot = new SequenceSlotViewModel();
-        int insertAt = SelectedSlot is not null
-            ? Slots.IndexOf(SelectedSlot) + 1
+        int insertAt = _selectedSlots.Count > 0
+            ? Slots.IndexOf(_selectedSlots.MaxBy(Slots.IndexOf)!) + 1
             : Slots.Count;
         Slots.Insert(insertAt, newSlot);
         SelectedSlot = newSlot;
@@ -94,33 +109,56 @@ public sealed partial class ProfileViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(HasSelectedSlot))]
     private void RemoveSlot()
     {
-        if (SelectedSlot is not null)
-            Slots.Remove(SelectedSlot);
+        var toRemove = _selectedSlots.ToList();
+        int maxIdx = toRemove.Max(Slots.IndexOf);
+        int minIdx = toRemove.Min(Slots.IndexOf);
+
+        // 削除後の選択: 最大インデックスの次 → なければ最小インデックスの前 → なければ null
+        SequenceSlotViewModel? nextSelection =
+            maxIdx + 1 < Slots.Count ? Slots[maxIdx + 1] :
+            minIdx - 1 >= 0 ? Slots[minIdx - 1] :
+            null;
+
+        foreach (var slot in toRemove)
+            Slots.Remove(slot);
+
+        SelectedSlot = nextSelection;
     }
 
     [RelayCommand(CanExecute = nameof(HasSelectedSlot))]
     private void CopySlot()
     {
-        if (SelectedSlot is null) return;
-        var copy = SequenceSlotViewModel.FromModel(SelectedSlot.ToModel());
-        int insertAt = Slots.IndexOf(SelectedSlot) + 1;
-        Slots.Insert(insertAt, copy);
-        SelectedSlot = copy;
+        if (_selectedSlots.Count == 0) return;
+        var ordered = _selectedSlots.OrderBy(Slots.IndexOf).ToList();
+        int insertAt = Slots.IndexOf(ordered.Last()) + 1;
+        var copies = ordered.Select(s => SequenceSlotViewModel.FromModel(s.ToModel())).ToList();
+        foreach (var copy in ((IEnumerable<SequenceSlotViewModel>)copies).Reverse())
+            Slots.Insert(insertAt, copy);
+        SelectedSlot = copies[0];
+        SelectionRequested?.Invoke(this, copies);
     }
 
     [RelayCommand(CanExecute = nameof(CanMoveUp))]
     private void MoveUp()
     {
-        int i = Slots.IndexOf(SelectedSlot!);
-        Slots.Move(i, i - 1);
+        var ordered = _selectedSlots.OrderBy(Slots.IndexOf).ToList();
+        foreach (var slot in ordered)
+        {
+            int i = Slots.IndexOf(slot);
+            Slots.Move(i, i - 1);
+        }
         NotifyMoveCommandsCanExecute();
     }
 
     [RelayCommand(CanExecute = nameof(CanMoveDown))]
     private void MoveDown()
     {
-        int i = Slots.IndexOf(SelectedSlot!);
-        Slots.Move(i, i + 1);
+        var ordered = _selectedSlots.OrderByDescending(Slots.IndexOf).ToList();
+        foreach (var slot in ordered)
+        {
+            int i = Slots.IndexOf(slot);
+            Slots.Move(i, i + 1);
+        }
         NotifyMoveCommandsCanExecute();
     }
 
@@ -171,9 +209,19 @@ public sealed partial class ProfileViewModel : ObservableObject
 
     // ── CanExecute ────────────────────────────────────────────────────────
 
-    private bool HasSelectedSlot => SelectedSlot is not null;
-    private bool CanMoveUp => SelectedSlot is not null && Slots.IndexOf(SelectedSlot) > 0;
-    private bool CanMoveDown => SelectedSlot is not null && Slots.IndexOf(SelectedSlot) < Slots.Count - 1;
+    private bool HasSelectedSlot => _selectedSlots.Count > 0;
+    private bool CanMoveUp => _selectedSlots.Count > 0
+        && Slots.IndexOf(_selectedSlots.MinBy(s => Slots.IndexOf(s))!) > 0;
+    private bool CanMoveDown => _selectedSlots.Count > 0
+        && Slots.IndexOf(_selectedSlots.MaxBy(s => Slots.IndexOf(s))!) < Slots.Count - 1;
+
+    private void NotifySelectionCommandsCanExecute()
+    {
+        RemoveSlotCommand.NotifyCanExecuteChanged();
+        CopySlotCommand.NotifyCanExecuteChanged();
+        MoveUpCommand.NotifyCanExecuteChanged();
+        MoveDownCommand.NotifyCanExecuteChanged();
+    }
 
     private void NotifyMoveCommandsCanExecute()
     {

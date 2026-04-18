@@ -92,6 +92,59 @@ public class ProfileViewModelTests
         _sut.Slots.Should().HaveCount(1);
     }
 
+    [Fact]
+    public void RemoveSlot_SelectsSlotBelowDeleted()
+    {
+        _sut.AddSlotCommand.Execute(null);
+        _sut.AddSlotCommand.Execute(null);
+        _sut.AddSlotCommand.Execute(null);
+        SequenceSlotViewModel below = _sut.Slots[2];
+        _sut.SelectedSlot = _sut.Slots[1];
+
+        _sut.RemoveSlotCommand.Execute(null);
+
+        _sut.SelectedSlot.Should().Be(below);
+    }
+
+    [Fact]
+    public void RemoveSlot_SelectsSlotAbove_WhenDeletedWasLast()
+    {
+        _sut.AddSlotCommand.Execute(null);
+        _sut.AddSlotCommand.Execute(null);
+        SequenceSlotViewModel above = _sut.Slots[0];
+        _sut.SelectedSlot = _sut.Slots[1];
+
+        _sut.RemoveSlotCommand.Execute(null);
+
+        _sut.SelectedSlot.Should().Be(above);
+    }
+
+    [Fact]
+    public void RemoveSlot_ClearsSelection_WhenLastSlotDeleted()
+    {
+        _sut.AddSlotCommand.Execute(null);
+        _sut.SelectedSlot = _sut.Slots[0];
+
+        _sut.RemoveSlotCommand.Execute(null);
+
+        _sut.SelectedSlot.Should().BeNull();
+    }
+
+    [Fact]
+    public void RemoveSlot_MultiSelect_SelectsSlotBelowLastDeleted()
+    {
+        _sut.AddSlotCommand.Execute(null);
+        _sut.AddSlotCommand.Execute(null);
+        _sut.AddSlotCommand.Execute(null);
+        _sut.AddSlotCommand.Execute(null);
+        SequenceSlotViewModel below = _sut.Slots[3];
+        _sut.SetSelectedSlots([_sut.Slots[0], _sut.Slots[2]]);
+
+        _sut.RemoveSlotCommand.Execute(null);
+
+        _sut.SelectedSlot.Should().Be(below);
+    }
+
     // ─── CopySlot ─────────────────────────────────────────────────────────
 
     [Fact]
@@ -264,6 +317,195 @@ public class ProfileViewModelTests
 
         _sut.Slots[0].Should().Be(second);
         _sut.Slots[1].Should().Be(first);
+    }
+
+    // ─── 複数選択: RemoveSlot ─────────────────────────────────────────────
+
+    [Fact]
+    public void RemoveSlot_RemovesAllSelectedSlots()
+    {
+        _sut.AddSlotCommand.Execute(null);
+        _sut.AddSlotCommand.Execute(null);
+        _sut.AddSlotCommand.Execute(null);
+        SequenceSlotViewModel a = _sut.Slots[0];
+        SequenceSlotViewModel b = _sut.Slots[1];
+        SequenceSlotViewModel c = _sut.Slots[2];
+        _sut.SetSelectedSlots([a, c]);
+
+        _sut.RemoveSlotCommand.Execute(null);
+
+        _sut.Slots.Should().ContainSingle().Which.Should().Be(b);
+    }
+
+    [Fact]
+    public void RemoveSlot_CanExecute_TrueWhenMultipleSlotsSelected()
+    {
+        _sut.AddSlotCommand.Execute(null);
+        _sut.AddSlotCommand.Execute(null);
+        _sut.SetSelectedSlots([_sut.Slots[0], _sut.Slots[1]]);
+
+        _sut.RemoveSlotCommand.CanExecute(null).Should().BeTrue();
+    }
+
+    // ─── 複数選択: CopySlot ───────────────────────────────────────────────
+
+    [Fact]
+    public void CopySlot_MultiSelect_InsertsAllCopiesAfterLastSelected()
+    {
+        _sut.AddSlotCommand.Execute(null);
+        _sut.AddSlotCommand.Execute(null);
+        _sut.AddSlotCommand.Execute(null);
+        SequenceSlotViewModel a = _sut.Slots[0];
+        SequenceSlotViewModel b = _sut.Slots[1];
+        SequenceSlotViewModel c = _sut.Slots[2];
+        _sut.SetSelectedSlots([a, b]); // 末尾選択は b (index 1)
+
+        _sut.CopySlotCommand.Execute(null);
+
+        // a, b の後ろ (index 2) に aコピー, bコピーが挿入され c は末尾へ
+        _sut.Slots.Should().HaveCount(5);
+        _sut.Slots[0].Should().Be(a);
+        _sut.Slots[1].Should().Be(b);
+        _sut.Slots[2].Should().NotBe(a).And.NotBe(b).And.NotBe(c); // aのコピー
+        _sut.Slots[3].Should().NotBe(a).And.NotBe(b).And.NotBe(c); // bのコピー
+        _sut.Slots[4].Should().Be(c);
+    }
+
+    [Fact]
+    public void CopySlot_MultiSelect_PreservesOrderOfCopies()
+    {
+        _sut.AddSlotCommand.Execute(null);
+        _sut.Slots[0].DurationMs = 100;
+        _sut.AddSlotCommand.Execute(null);
+        _sut.Slots[1].DurationMs = 200;
+        _sut.SetSelectedSlots([_sut.Slots[0], _sut.Slots[1]]);
+
+        _sut.CopySlotCommand.Execute(null);
+
+        _sut.Slots[2].DurationMs.Should().Be(100);
+        _sut.Slots[3].DurationMs.Should().Be(200);
+    }
+
+    [Fact]
+    public void CopySlot_MultiSelect_RaisesSelectionRequested_WithAllCopies()
+    {
+        _sut.AddSlotCommand.Execute(null);
+        _sut.AddSlotCommand.Execute(null);
+        _sut.SetSelectedSlots([_sut.Slots[0], _sut.Slots[1]]);
+
+        IList<SequenceSlotViewModel>? requestedSlots = null;
+        _sut.SelectionRequested += (_, slots) => requestedSlots = slots;
+
+        _sut.CopySlotCommand.Execute(null);
+
+        requestedSlots.Should().NotBeNull();
+        requestedSlots!.Should().HaveCount(2);
+        requestedSlots.Should().NotIntersectWith(_sut.Slots.Take(2)); // コピーは別オブジェクト
+    }
+
+    // ─── 複数選択: MoveUp ─────────────────────────────────────────────────
+
+    [Fact]
+    public void MoveUp_MultiSelect_MovesBlockUpByOne()
+    {
+        _sut.AddSlotCommand.Execute(null);
+        _sut.AddSlotCommand.Execute(null);
+        _sut.AddSlotCommand.Execute(null);
+        SequenceSlotViewModel a = _sut.Slots[0];
+        SequenceSlotViewModel b = _sut.Slots[1];
+        SequenceSlotViewModel c = _sut.Slots[2];
+        _sut.SetSelectedSlots([b, c]);
+
+        _sut.MoveUpCommand.Execute(null);
+
+        _sut.Slots[0].Should().Be(b);
+        _sut.Slots[1].Should().Be(c);
+        _sut.Slots[2].Should().Be(a);
+    }
+
+    [Fact]
+    public void MoveUp_CanExecute_FalseWhenTopOfMultiSelectIsFirst()
+    {
+        _sut.AddSlotCommand.Execute(null);
+        _sut.AddSlotCommand.Execute(null);
+        _sut.AddSlotCommand.Execute(null);
+        _sut.SetSelectedSlots([_sut.Slots[0], _sut.Slots[1]]);
+
+        _sut.MoveUpCommand.CanExecute(null).Should().BeFalse();
+    }
+
+    [Fact]
+    public void MoveUp_CanExecute_TrueWhenTopOfMultiSelectIsNotFirst()
+    {
+        _sut.AddSlotCommand.Execute(null);
+        _sut.AddSlotCommand.Execute(null);
+        _sut.AddSlotCommand.Execute(null);
+        _sut.SetSelectedSlots([_sut.Slots[1], _sut.Slots[2]]);
+
+        _sut.MoveUpCommand.CanExecute(null).Should().BeTrue();
+    }
+
+    // ─── 複数選択: MoveDown ───────────────────────────────────────────────
+
+    [Fact]
+    public void MoveDown_MultiSelect_MovesBlockDownByOne()
+    {
+        _sut.AddSlotCommand.Execute(null);
+        _sut.AddSlotCommand.Execute(null);
+        _sut.AddSlotCommand.Execute(null);
+        SequenceSlotViewModel a = _sut.Slots[0];
+        SequenceSlotViewModel b = _sut.Slots[1];
+        SequenceSlotViewModel c = _sut.Slots[2];
+        _sut.SetSelectedSlots([a, b]);
+
+        _sut.MoveDownCommand.Execute(null);
+
+        _sut.Slots[0].Should().Be(c);
+        _sut.Slots[1].Should().Be(a);
+        _sut.Slots[2].Should().Be(b);
+    }
+
+    [Fact]
+    public void MoveDown_CanExecute_FalseWhenBottomOfMultiSelectIsLast()
+    {
+        _sut.AddSlotCommand.Execute(null);
+        _sut.AddSlotCommand.Execute(null);
+        _sut.AddSlotCommand.Execute(null);
+        _sut.SetSelectedSlots([_sut.Slots[1], _sut.Slots[2]]);
+
+        _sut.MoveDownCommand.CanExecute(null).Should().BeFalse();
+    }
+
+    [Fact]
+    public void MoveDown_CanExecute_TrueWhenBottomOfMultiSelectIsNotLast()
+    {
+        _sut.AddSlotCommand.Execute(null);
+        _sut.AddSlotCommand.Execute(null);
+        _sut.AddSlotCommand.Execute(null);
+        _sut.SetSelectedSlots([_sut.Slots[0], _sut.Slots[1]]);
+
+        _sut.MoveDownCommand.CanExecute(null).Should().BeTrue();
+    }
+
+    // ─── 複数選択: AddSlot ────────────────────────────────────────────────
+
+    [Fact]
+    public void AddSlot_InsertsAfterLastSelectedSlot_WhenMultipleSelected()
+    {
+        _sut.AddSlotCommand.Execute(null);
+        _sut.AddSlotCommand.Execute(null);
+        _sut.AddSlotCommand.Execute(null);
+        SequenceSlotViewModel a = _sut.Slots[0];
+        SequenceSlotViewModel b = _sut.Slots[1];
+        SequenceSlotViewModel c = _sut.Slots[2];
+        _sut.SetSelectedSlots([a, b]); // 末尾選択は b (index 1)
+
+        _sut.AddSlotCommand.Execute(null);
+
+        _sut.Slots.Should().HaveCount(4);
+        _sut.Slots[0].Should().Be(a);
+        _sut.Slots[1].Should().Be(b);
+        _sut.Slots[3].Should().Be(c);
     }
 
     // ─── AllSlotsValid ────────────────────────────────────────────────────

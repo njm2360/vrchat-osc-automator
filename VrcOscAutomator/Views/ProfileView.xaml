@@ -30,7 +30,8 @@
         </Grid.ColumnDefinitions>
 
         <!-- ========== シーケンス DataGrid ========== -->
-        <DataGrid Grid.Column="0"
+        <DataGrid x:Name="SlotsDataGrid"
+                  Grid.Column="0"
                   ItemsSource="{Binding Slots}"
                   SelectedItem="{Binding SelectedSlot}"
                   AutoGenerateColumns="False"
@@ -39,7 +40,7 @@
                   CanUserSortColumns="False"
                   SelectionUnit="FullRow"
                   HeadersVisibility="Column"
-                  RowDetailsVisibilityMode="VisibleWhenSelected"
+                  SelectionChanged="SlotsDataGrid_SelectionChanged"
                   Margin="4">
 
             <!-- ========== アコーディオン展開パネル ========== -->
