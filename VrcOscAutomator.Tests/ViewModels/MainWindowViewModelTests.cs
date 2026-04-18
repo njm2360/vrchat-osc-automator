@@ -23,7 +23,7 @@ public class MainWindowViewModelTests
     public MainWindowViewModelTests()
     {
         _repository.Setup(r => r.SaveAsync(It.IsAny<AppSettings>())).Returns(Task.CompletedTask);
-        _repository.Setup(r => r.LoadAsync()).ReturnsAsync(new AppSettings());
+        _repository.Setup(r => r.LoadAsync()).ReturnsAsync(new SettingsLoadResult(new AppSettings()));
 
         _sut = new MainWindowViewModel(
             _player.Object, _repository.Object, _oscSender.Object,
@@ -185,7 +185,7 @@ public class MainWindowViewModelTests
     [Fact]
     public async Task LoadedAsync_ReplacesDefaultProfilesWithSettings()
     {
-        _repository.Setup(r => r.LoadAsync()).ReturnsAsync(new AppSettings
+        _repository.Setup(r => r.LoadAsync()).ReturnsAsync(new SettingsLoadResult(new AppSettings
         {
             Profiles =
             [
@@ -193,7 +193,7 @@ public class MainWindowViewModelTests
                 new() { Name = "B" },
                 new() { Name = "C" },
             ],
-        });
+        }));
 
         await _sut.LoadedCommand.ExecuteAsync(null);
 
@@ -204,7 +204,7 @@ public class MainWindowViewModelTests
     [Fact]
     public async Task LoadedAsync_EmptyProfilesInSettings_CreatesDefaultProfile()
     {
-        _repository.Setup(r => r.LoadAsync()).ReturnsAsync(new AppSettings { Profiles = [] });
+        _repository.Setup(r => r.LoadAsync()).ReturnsAsync(new SettingsLoadResult(new AppSettings { Profiles = [] }));
 
         await _sut.LoadedCommand.ExecuteAsync(null);
 
@@ -215,10 +215,10 @@ public class MainWindowViewModelTests
     [Fact]
     public async Task LoadedAsync_SetsSelectedIndexToZero()
     {
-        _repository.Setup(r => r.LoadAsync()).ReturnsAsync(new AppSettings
+        _repository.Setup(r => r.LoadAsync()).ReturnsAsync(new SettingsLoadResult(new AppSettings
         {
             Profiles = [new() { Name = "X" }, new() { Name = "Y" }],
-        });
+        }));
 
         await _sut.LoadedCommand.ExecuteAsync(null);
 

@@ -9,6 +9,18 @@
         <conv:BoolToVisibilityConverter x:Key="BoolToVis" />
         <conv:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis" />
         <conv:FloatToIntBoolConverter x:Key="IntValueToBoolConverter" />
+        <DataTemplate x:Key="TransitionModePicker">
+            <ComboBox Width="90"
+                      SelectedIndex="{Binding SelectedTransitionModeIndex, UpdateSourceTrigger=PropertyChanged}"
+                      VerticalAlignment="Center"
+                      Visibility="{Binding IsTransitionAvailable, Converter={StaticResource BoolToVis}}">
+                <ComboBoxItem Content="固定値" />
+                <ComboBoxItem Content="Linear" />
+                <ComboBoxItem Content="EaseIn" />
+                <ComboBoxItem Content="EaseOut" />
+                <ComboBoxItem Content="EaseInOut" />
+            </ComboBox>
+        </DataTemplate>
     </UserControl.Resources>
 
     <Grid>
@@ -24,6 +36,7 @@
                   AutoGenerateColumns="False"
                   CanUserAddRows="False"
                   CanUserDeleteRows="False"
+                  CanUserSortColumns="False"
                   SelectionUnit="FullRow"
                   HeadersVisibility="Column"
                   RowDetailsVisibilityMode="VisibleWhenSelected"
@@ -74,9 +87,9 @@
                                 <Grid Margin="0,0,0,4">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="96" />
-                                        <ColumnDefinition Width="200" />
+                                        <ColumnDefinition Width="160" />
                                         <ColumnDefinition Width="16" />
-                                        <ColumnDefinition Width="60" />
+                                        <ColumnDefinition Width="40" />
                                         <ColumnDefinition Width="80" />
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0" Text="OSCアドレス:"
@@ -98,29 +111,67 @@
                                       Margin="0,0,0,0">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="96" />
-                                        <ColumnDefinition Width="100" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="8" />
+                                        <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0" Text="値:"
                                                VerticalAlignment="Center" Foreground="#444" />
-                                    <TextBox Grid.Column="1"
+                                    <ContentControl Grid.Column="1"
+                                                    Content="{Binding}"
+                                                    ContentTemplate="{StaticResource TransitionModePicker}" />
+                                    <TextBox Grid.Column="3" Width="100"
                                              Text="{Binding FloatValue, UpdateSourceTrigger=LostFocus}"
                                              VerticalAlignment="Center"
+                                             Visibility="{Binding IsFixedValueMode, Converter={StaticResource BoolToVis}}"
                                              b:NumericTextBoxBehavior.RefreshOnLostFocus="True"
                                              b:NumericTextBoxBehavior.AllowDecimal="True" />
+                                    <StackPanel Grid.Column="3" Orientation="Horizontal"
+                                                Visibility="{Binding IsTransitionMode, Converter={StaticResource BoolToVis}}">
+                                        <TextBox Width="60"
+                                                 Text="{Binding FloatTransitionFrom, UpdateSourceTrigger=LostFocus}"
+                                                 VerticalAlignment="Center"
+                                                 b:NumericTextBoxBehavior.RefreshOnLostFocus="True"
+                                                 b:NumericTextBoxBehavior.AllowDecimal="True" />
+                                        <TextBlock Text=" → " VerticalAlignment="Center" Margin="4,0" Foreground="#444" />
+                                        <TextBox Width="60"
+                                                 Text="{Binding FloatTransitionTo, UpdateSourceTrigger=LostFocus}"
+                                                 VerticalAlignment="Center"
+                                                 b:NumericTextBoxBehavior.RefreshOnLostFocus="True"
+                                                 b:NumericTextBoxBehavior.AllowDecimal="True" />
+                                    </StackPanel>
                                 </Grid>
 
                                 <!-- 行2b: Int モード — 数値入力 -->
                                 <Grid Visibility="{Binding IsIntMode, Converter={StaticResource BoolToVis}}">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="96" />
-                                        <ColumnDefinition Width="100" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="8" />
+                                        <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0" Text="値:"
                                                VerticalAlignment="Center" Foreground="#444" />
-                                    <TextBox Grid.Column="1"
+                                    <ContentControl Grid.Column="1"
+                                                    Content="{Binding}"
+                                                    ContentTemplate="{StaticResource TransitionModePicker}" />
+                                    <TextBox Grid.Column="3" Width="100"
                                              Text="{Binding IntValue, UpdateSourceTrigger=PropertyChanged}"
                                              VerticalAlignment="Center"
+                                             Visibility="{Binding IsFixedValueMode, Converter={StaticResource BoolToVis}}"
                                              b:NumericTextBoxBehavior.RefreshOnLostFocus="True" />
+                                    <StackPanel Grid.Column="3" Orientation="Horizontal"
+                                                Visibility="{Binding IsTransitionMode, Converter={StaticResource BoolToVis}}">
+                                        <TextBox Width="60"
+                                                 Text="{Binding IntTransitionFrom, UpdateSourceTrigger=PropertyChanged}"
+                                                 VerticalAlignment="Center"
+                                                 b:NumericTextBoxBehavior.RefreshOnLostFocus="True" />
+                                        <TextBlock Text=" → " VerticalAlignment="Center" Margin="4,0" Foreground="#444" />
+                                        <TextBox Width="60"
+                                                 Text="{Binding IntTransitionTo, UpdateSourceTrigger=PropertyChanged}"
+                                                 VerticalAlignment="Center"
+                                                 b:NumericTextBoxBehavior.RefreshOnLostFocus="True" />
+                                    </StackPanel>
                                 </Grid>
 
                                 <!-- 行2c: Bool モード — チェックボックス -->

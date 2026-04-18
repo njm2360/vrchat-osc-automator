@@ -17,14 +17,19 @@ public sealed partial class ProfileViewModel : ObservableObject
         _dialogService = dialogService;
         _importExport = importExport;
         Slots = [];
+        // スロットの追加・削除時にAllSlotsValidとExportCommandを再評価
         Slots.CollectionChanged += OnSlotsCollectionChanged;
     }
+
+    // ── プロファイル ──────────────────────────────────────────────────────
 
     [ObservableProperty]
     public partial string Name { get; set; } = string.Empty;
 
     [ObservableProperty]
     public partial bool IsLoopMode { get; set; }
+
+    // ── リネーム処理 ──────────────────────────────────────────────────────
 
     [ObservableProperty]
     public partial bool IsRenaming { get; set; }
@@ -35,6 +40,9 @@ public sealed partial class ProfileViewModel : ObservableObject
     public void CommitRename() { string t = Name.Trim(); Name = t.Length > 0 ? t : _nameBeforeRename; IsRenaming = false; }
     public void CancelRename() { Name = _nameBeforeRename; IsRenaming = false; }
 
+    // ── スロット一覧 ──────────────────────────────────────────────────────
+
+    // DataGrid で選択中のスロット（null = 未選択）
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RemoveSlotCommand))]
     [NotifyCanExecuteChangedFor(nameof(CopySlotCommand))]
@@ -44,9 +52,10 @@ public sealed partial class ProfileViewModel : ObservableObject
 
     public ObservableCollection<SequenceSlotViewModel> Slots { get; }
 
-    /// <summary>全スロットが有効であれば true。</summary>
+    // 全スロットのアドレスが有効であれば true
     public bool AllSlotsValid => Slots.All(s => s.IsValid);
 
+    // スロットの追加・削除時にAllSlotsValidを再通知し、各スロットの変更監視を付け外し
     private void OnSlotsCollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
     {
         if (e.NewItems is not null)
@@ -61,12 +70,16 @@ public sealed partial class ProfileViewModel : ObservableObject
         ExportCommand.NotifyCanExecuteChanged();
     }
 
+    // 個々のスロットのIsValidが変わったときAllSlotsValidを再通知
     private void OnSlotPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(SequenceSlotViewModel.IsValid))
             OnPropertyChanged(nameof(AllSlotsValid));
     }
 
+    // ── スロット操作コマンド ──────────────────────────────────────────────
+
+    // 選択行の直後にスロットを挿入（未選択時は末尾）
     [RelayCommand]
     private void AddSlot()
     {
@@ -111,6 +124,8 @@ public sealed partial class ProfileViewModel : ObservableObject
         NotifyMoveCommandsCanExecute();
     }
 
+    // ── インポート / エクスポート ─────────────────────────────────────────
+
     [RelayCommand(CanExecute = nameof(CanExport))]
     private void Export()
     {
@@ -154,13 +169,11 @@ public sealed partial class ProfileViewModel : ObservableObject
             Slots.Add(SequenceSlotViewModel.FromModel(slot));
     }
 
+    // ── CanExecute ────────────────────────────────────────────────────────
+
     private bool HasSelectedSlot => SelectedSlot is not null;
-
-    private bool CanMoveUp =>
-        SelectedSlot is not null && Slots.IndexOf(SelectedSlot) > 0;
-
-    private bool CanMoveDown =>
-        SelectedSlot is not null && Slots.IndexOf(SelectedSlot) < Slots.Count - 1;
+    private bool CanMoveUp => SelectedSlot is not null && Slots.IndexOf(SelectedSlot) > 0;
+    private bool CanMoveDown => SelectedSlot is not null && Slots.IndexOf(SelectedSlot) < Slots.Count - 1;
 
     private void NotifyMoveCommandsCanExecute()
     {
@@ -168,6 +181,9 @@ public sealed partial class ProfileViewModel : ObservableObject
         MoveDownCommand.NotifyCanExecuteChanged();
     }
 
+    // ── モデル変換 ────────────────────────────────────────────────────────
+
+    // VM => Profile
     public Profile ToModel() => new()
     {
         Name = Name,
@@ -175,6 +191,7 @@ public sealed partial class ProfileViewModel : ObservableObject
         Slots = [.. Slots.Select(s => s.ToModel())],
     };
 
+    // Profile => VM
     public void LoadFromModel(Profile profile)
     {
         Name = profile.Name;

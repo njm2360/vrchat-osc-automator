@@ -18,6 +18,7 @@ public sealed class JsonSettingsRepository : ISettingsRepository
         WriteIndented = true,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         PropertyNameCaseInsensitive = true,
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
     // V1 デシリアライズ用
@@ -26,37 +27,68 @@ public sealed class JsonSettingsRepository : ISettingsRepository
         PropertyNameCaseInsensitive = true,
     };
 
-    public async Task<AppSettings> LoadAsync()
+    public async Task<SettingsLoadResult> LoadAsync()
     {
         if (!File.Exists(FilePath))
-            return new AppSettings();
+            return new SettingsLoadResult(new AppSettings());
 
         string raw = await File.ReadAllTextAsync(FilePath);
 
-        if (GetVersion(raw) >= 2)
+        try
         {
-            return JsonSerializer.Deserialize<AppSettings>(raw, JsonOptions) ?? new AppSettings();
-        }
-
-        // V1 → V2 マイグレーション
-        var legacy = JsonSerializer.Deserialize<LegacyAppSettings>(raw, LegacyJsonOptions);
-        if (legacy is null)
-            return new AppSettings();
-
-        var migrated = new AppSettings
-        {
-            Targets = legacy.Targets,
-            Hotkeys = legacy.Hotkeys,
-            Profiles = legacy.Profiles.Select(p => new Profile
+            if (GetVersion(raw) >= 2)
             {
-                Name = p.Name,
-                IsLoopMode = legacy.IsLoopMode,
-                Slots = p.Slots.Select(MigrateLegacySlot).ToList(),
-            }).ToList(),
-        };
+                var settings = JsonSerializer.Deserialize<AppSettings>(raw, JsonOptions) ?? new AppSettings();
+                return new SettingsLoadResult(settings);
+            }
 
-        await SaveAsync(migrated);
-        return migrated;
+            // V1 → V2 マイグレーション
+            var legacy = JsonSerializer.Deserialize<LegacyAppSettings>(raw, LegacyJsonOptions);
+            if (legacy is null)
+                return new SettingsLoadResult(new AppSettings());
+
+            var migrated = new AppSettings
+            {
+                Targets = legacy.Targets,
+                Hotkeys = legacy.Hotkeys,
+                Profiles = [.. legacy.Profiles.Select(p => new Profile
+                {
+                    Name = p.Name,
+                    IsLoopMode = legacy.IsLoopMode,
+                    Slots = [.. p.Slots.Select(MigrateLegacySlot)],
+                })],
+            };
+
+            await SaveAsync(migrated);
+            return new SettingsLoadResult(migrated);
+        }
+        catch
+        {
+            string? backupPath = TryBackup();
+            await SaveAsync(new AppSettings());
+            string detail = backupPath is not null
+                ? $"破損した設定のバックアップを保存しました:\n{backupPath}"
+                : "破損した設定のバックアップの作成に失敗しました。";
+            return new SettingsLoadResult(new AppSettings(), WasCorrupted: true,
+                CorruptionDetail: $"設定ファイルが破損しています。\nデフォルト設定で起動しました。\n\n{detail}");
+        }
+    }
+
+    private static string? TryBackup()
+    {
+        try
+        {
+            string backupDir = Path.Combine(Path.GetDirectoryName(FilePath)!, "backup");
+            Directory.CreateDirectory(backupDir);
+            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            string backupPath = Path.Combine(backupDir, $"settings_{timestamp}.json");
+            File.Copy(FilePath, backupPath);
+            return backupPath;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     public async Task SaveAsync(AppSettings settings)
@@ -86,10 +118,10 @@ public sealed class JsonSettingsRepository : ISettingsRepository
              ? new WaitSlot(s.DurationMs)
              : s.ValueType switch
              {
-                 1 => new IntSlot(s.Address, (int)s.Value, s.DurationMs, s.ResetOnComplete),
+                 1 => new IntSlot(s.Address, (int)s.Value, s.DurationMs, s.ResetOnComplete, TransitionMode.None),
                  2 => new BoolSlot(s.Address, s.Value != 0f, s.DurationMs, s.ResetOnComplete),
                  3 => new StringSlot(s.Address, s.StringValue, s.DurationMs, s.ResetOnComplete),
-                 _ => new FloatSlot(s.Address, s.Value, s.DurationMs, s.ResetOnComplete),
+                 _ => new FloatSlot(s.Address, s.Value, s.DurationMs, s.ResetOnComplete, TransitionMode.None),
              },
     };
 

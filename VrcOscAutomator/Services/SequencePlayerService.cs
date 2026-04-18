@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using VrcOscAutomator.Interfaces;
 using VrcOscAutomator.Models;
 
@@ -7,7 +8,7 @@ public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender 
 {
     private CancellationTokenSource? _stopCts;
 
-    private CancellationTokenSource? _pauseCts;
+    private volatile CancellationTokenSource? _pauseCts;
 
     private readonly SemaphoreSlim _resumeSignal = new(0, 1);
 
@@ -20,14 +21,19 @@ public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender 
 
     private readonly HashSet<int> _pressedKeys = [];
     private readonly HashSet<MouseButton> _pressedMouseButtons = [];
+    private readonly Lock _inputLock = new();
     private readonly Dictionary<int, CancellationTokenSource> _repeatTasks = [];
     private KeyRepeatSettings _keyRepeatSettings = new();
 
     public bool IsPlaying => !_playTask.IsCompleted;
-    public bool IsPaused { get; private set; }
-    public int CurrentSlotIndex { get; private set; } = -1;
 
-    public async Task PlayAsync(IReadOnlyList<SequenceSlot> slots, bool loop, IProgress<int>? slotProgress, CancellationToken cancellationToken)
+    private volatile bool _isPaused;
+    public bool IsPaused { get => _isPaused; private set => _isPaused = value; }
+
+    private volatile int _currentSlotIndex = -1;
+    public int CurrentSlotIndex { get => _currentSlotIndex; private set => _currentSlotIndex = value; }
+
+    public async Task PlayAsync(IReadOnlyList<SequenceSlot> slots, bool loop, IProgress<SequenceProgress>? slotProgress, CancellationToken cancellationToken)
     {
         // 前回の残留シグナルをクリア
         while (_resumeSignal.CurrentCount > 0)
@@ -35,14 +41,22 @@ public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender 
         IsPaused = false;
 
         _stopCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        _playTask = ExecuteAsync(slots, loop, slotProgress, _stopCts.Token);
+        _playTask = Task.Run(() => ExecuteAsync(slots, loop, slotProgress, _stopCts.Token), CancellationToken.None);
         await _playTask;
     }
 
-    private async Task ExecuteAsync(IReadOnlyList<SequenceSlot> slots, bool loop, IProgress<int>? slotProgress, CancellationToken stopCt)
+    private static IReadOnlyDictionary<int, int> BuildLoopIterations(Stack<(int startIndex, int remaining, int iteration)> stack)
     {
-        // ループスタック: (ループ開始インデックス, 残り繰り返し回数)
-        var loopStack = new Stack<(int startIndex, int remaining)>();
+        var dict = new Dictionary<int, int>(stack.Count);
+        foreach ((int startIndex, _, int iteration) in stack)
+            dict[startIndex] = iteration;
+        return dict;
+    }
+
+    private async Task ExecuteAsync(IReadOnlyList<SequenceSlot> slots, bool loop, IProgress<SequenceProgress>? slotProgress, CancellationToken stopCt)
+    {
+        // ループスタック: (ループ開始インデックス, 残り繰り返し回数, 現在の繰り返しカウント)
+        var loopStack = new Stack<(int startIndex, int remaining, int iteration)>();
 
         try
         {
@@ -68,7 +82,7 @@ public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender 
                     // ── 繰り返し開始マーカー ──────────────────────────
                     if (slot is LoopBeginSlot lb)
                     {
-                        loopStack.Push((i, lb.RepeatCount));
+                        loopStack.Push((i, lb.RepeatCount, 1));
                         i++;
                         continue;
                     }
@@ -78,11 +92,11 @@ public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender 
                     {
                         if (loopStack.Count > 0)
                         {
-                            (int startIdx, int remaining) = loopStack.Pop();
+                            (int startIdx, int remaining, int iteration) = loopStack.Pop();
                             // remaining == 0: 無限ループ、remaining > 1: まだ残りあり
                             if (remaining == 0 || remaining > 1)
                             {
-                                loopStack.Push((startIdx, remaining == 0 ? 0 : remaining - 1));
+                                loopStack.Push((startIdx, remaining == 0 ? 0 : remaining - 1, iteration + 1));
                                 i = startIdx + 1;
                                 continue;
                             }
@@ -95,7 +109,7 @@ public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender 
                     if (slot is BreakpointSlot)
                     {
                         CurrentSlotIndex = i;
-                        slotProgress?.Report(i);
+                        slotProgress?.Report(new SequenceProgress(i, BuildLoopIterations(loopStack)));
                         IsPaused = true;
                         ReleaseAllInputs();
                         await _resumeSignal.WaitAsync(stopCt);
@@ -106,26 +120,17 @@ public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender 
 
                     // ── 通常スロット（WaitSlot / OscSlot）──────────────
                     CurrentSlotIndex = i;
-                    slotProgress?.Report(i);
+                    slotProgress?.Report(new SequenceProgress(i, BuildLoopIterations(loopStack)));
 
                     OscSlot? activeOsc = slot as OscSlot;
-                    int durationMs = slot switch
-                    {
-                        OscSlot osc => osc.DurationMs,
-                        WaitSlot w => w.DurationMs,
-                        RandomWaitSlot rw => Random.Shared.Next(rw.MinMs, rw.MaxMs + 1),
-                        KeySingleSlot ks => ks.DurationMs,
-                        KeyTypeStringSlot kts => kts.DurationMs,
-                        MouseButtonSlot mb => mb.DurationMs,
-                        MouseWheelSlot mw => mw.DurationMs,
-                        MouseMoveSlot mm => mm.DurationMs,
-                        _ => 0,
-                    };
+                    bool isTransition = activeOsc is FloatSlot { TransitionMode: not TransitionMode.None }
+                                                  or IntSlot { TransitionMode: not TransitionMode.None };
 
                     if (activeOsc is not null)
                     {
                         _activeSlot = activeOsc;
-                        SendCommand(activeOsc);
+                        if (!isTransition)
+                            SendCommand(activeOsc);
                     }
 
                     switch (slot)
@@ -135,17 +140,17 @@ public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender 
                             {
                                 case KeyAction.Press:
                                     keyboardSender.SendKey(ks.VirtualKey, KeyAction.Press);
-                                    _pressedKeys.Add(ks.VirtualKey);
+                                    lock (_inputLock) { _pressedKeys.Add(ks.VirtualKey); }
                                     StartKeyRepeat(ks.VirtualKey, stopCt);
                                     break;
                                 case KeyAction.Release:
                                     StopKeyRepeat(ks.VirtualKey);
                                     keyboardSender.SendKey(ks.VirtualKey, KeyAction.Release);
-                                    _pressedKeys.Remove(ks.VirtualKey);
+                                    lock (_inputLock) { _pressedKeys.Remove(ks.VirtualKey); }
                                     break;
                                 case KeyAction.PressAndRelease:
                                     keyboardSender.SendKey(ks.VirtualKey, KeyAction.Press);
-                                    _pressedKeys.Add(ks.VirtualKey);
+                                    lock (_inputLock) { _pressedKeys.Add(ks.VirtualKey); }
                                     _pendingKeyRelease = ks;
                                     break;
                             }
@@ -159,12 +164,12 @@ public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender 
                             mouseSender.SendMouseButton(mb.Button, mbSendAction);
                             if (mb.Action is KeyAction.Press or KeyAction.PressAndRelease)
                             {
-                                _pressedMouseButtons.Add(mb.Button);
+                                lock (_inputLock) { _pressedMouseButtons.Add(mb.Button); }
                                 if (mb.Action == KeyAction.PressAndRelease) _pendingMouseRelease = mb;
                             }
                             else
                             {
-                                _pressedMouseButtons.Remove(mb.Button);
+                                lock (_inputLock) { _pressedMouseButtons.Remove(mb.Button); }
                             }
                             break;
                         case MouseWheelSlot mw:
@@ -175,21 +180,12 @@ public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender 
                             break;
                     }
 
-                    await SlotDelayAsync(activeOsc, durationMs, stopCt);
+                    if (isTransition)
+                        await SendTransitionAsync(activeOsc!, stopCt);
+                    else
+                        await SlotDelayAsync(activeOsc, slot.GetDurationMs(), stopCt);
 
-                    // PressAndRelease: 待機後にリリース
-                    if (_pendingKeyRelease != null)
-                    {
-                        keyboardSender.SendKey(_pendingKeyRelease.VirtualKey, KeyAction.Release);
-                        _pressedKeys.Remove(_pendingKeyRelease.VirtualKey);
-                        _pendingKeyRelease = null;
-                    }
-                    if (_pendingMouseRelease != null)
-                    {
-                        mouseSender.SendMouseButton(_pendingMouseRelease.Button, KeyAction.Release);
-                        _pressedMouseButtons.Remove(_pendingMouseRelease.Button);
-                        _pendingMouseRelease = null;
-                    }
+                    FlushPendingReleases();
 
                     if (activeOsc is { ResetOnComplete: true }) ResetSlotValue(activeOsc);
                     _activeSlot = null; // 正常完了済み — finally で二重リセットしない
@@ -209,25 +205,11 @@ public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender 
             if (_activeSlot is not null) ResetSlotValue(_activeSlot);
             _activeSlot = null;
 
-            // キャンセル時も PressAndRelease のリリースを確実に送信
-            if (_pendingKeyRelease != null)
-            {
-                keyboardSender.SendKey(_pendingKeyRelease.VirtualKey, KeyAction.Release);
-                _pressedKeys.Remove(_pendingKeyRelease.VirtualKey);
-                _pendingKeyRelease = null;
-            }
-            if (_pendingMouseRelease != null)
-            {
-                mouseSender.SendMouseButton(_pendingMouseRelease.Button, KeyAction.Release);
-                _pressedMouseButtons.Remove(_pendingMouseRelease.Button);
-                _pendingMouseRelease = null;
-            }
-
-            // 残存する押下状態を全て解除してセットをクリア
+            FlushPendingReleases();
             ClearInputState();
 
             CurrentSlotIndex = -1;
-            slotProgress?.Report(-1);
+            slotProgress?.Report(new SequenceProgress(-1, new Dictionary<int, int>()));
         }
     }
 
@@ -291,7 +273,7 @@ public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender 
     {
         if (IsPaused || !IsPlaying) return Task.CompletedTask;
         IsPaused = true;
-        _pauseCts?.Cancel();
+        try { _pauseCts?.Cancel(); } catch (ObjectDisposedException) { }
         return Task.CompletedTask;
     }
 
@@ -318,6 +300,81 @@ public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender 
             case IntSlot n: oscSender.SendInt(n.Address, n.Value); break;
             case BoolSlot b: oscSender.SendBool(b.Address, b.Value); break;
             case StringSlot s: oscSender.SendString(s.Address, s.Value); break;
+        }
+    }
+
+    private async Task SendTransitionAsync(OscSlot slot, CancellationToken stopCt)
+    {
+        const int StepMs = 50;
+        int totalMs = slot.GetDurationMs();
+        TransitionMode mode = slot switch
+        {
+            FloatSlot f => f.TransitionMode,
+            IntSlot n => n.TransitionMode,
+            _ => throw new UnreachableException(),
+        };
+
+        SendTransitionValue(slot, 0f, mode);
+
+        int elapsed = 0;
+        while (elapsed < totalMs)
+        {
+            stopCt.ThrowIfCancellationRequested();
+
+            int stepMs = Math.Min(StepMs, totalMs - elapsed);
+            CancellationTokenSource pauseCts = CancellationTokenSource.CreateLinkedTokenSource(stopCt);
+            _pauseCts = pauseCts;
+            if (IsPaused) pauseCts.Cancel();
+
+            long startTick = Environment.TickCount64;
+            try
+            {
+                await Task.Delay(stepMs, pauseCts.Token);
+                _pauseCts = null;
+                pauseCts.Dispose();
+                elapsed += stepMs;
+            }
+            catch (OperationCanceledException) when (!stopCt.IsCancellationRequested)
+            {
+                elapsed += (int)Math.Min(Environment.TickCount64 - startTick, (long)stepMs);
+                _pauseCts = null;
+                pauseCts.Dispose();
+
+                if (elapsed < totalMs)
+                {
+                    ResetSlotValue(slot);
+                    _activeSlot = null;
+                    ReleaseAllInputs();
+                    await _resumeSignal.WaitAsync(stopCt);
+                    _activeSlot = slot;
+                    RepressAllInputs();
+                    SendTransitionValue(slot, (float)elapsed / totalMs, mode);
+                }
+                continue;
+            }
+
+            float t = elapsed >= totalMs ? 1f : (float)elapsed / totalMs;
+            SendTransitionValue(slot, t, mode);
+        }
+    }
+
+    private void SendTransitionValue(OscSlot slot, float t, TransitionMode mode)
+    {
+        float eased = mode switch
+        {
+            TransitionMode.EaseIn => t * t,
+            TransitionMode.EaseOut => 1f - (1f - t) * (1f - t),
+            TransitionMode.EaseInOut => t < 0.5f ? 2f * t * t : 1f - MathF.Pow(-2f * t + 2f, 2f) / 2f,
+            _ => t,
+        };
+        switch (slot)
+        {
+            case FloatSlot f:
+                oscSender.SendFloat(f.Address, f.TransitionFromValue!.Value + (f.TransitionToValue!.Value - f.TransitionFromValue!.Value) * eased);
+                break;
+            case IntSlot n:
+                oscSender.SendInt(n.Address, (int)Math.Round(n.TransitionFromValue!.Value + (double)(n.TransitionToValue!.Value - n.TransitionFromValue!.Value) * eased));
+                break;
         }
     }
 
@@ -355,8 +412,11 @@ public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender 
             while (!ct.IsCancellationRequested)
             {
                 await Task.Delay(intervalMs, ct);
-                if (!IsPaused && _pressedKeys.Contains(virtualKey))
-                    keyboardSender.SendKey(virtualKey, KeyAction.Press);
+                lock (_inputLock)
+                {
+                    if (!IsPaused && _pressedKeys.Contains(virtualKey))
+                        keyboardSender.SendKey(virtualKey, KeyAction.Press);
+                }
             }
         }
         catch (OperationCanceledException) { }
@@ -381,28 +441,53 @@ public sealed class SequencePlayerService(IOscSender oscSender, IKeyboardSender 
         _repeatTasks.Clear();
     }
 
+    private void FlushPendingReleases()
+    {
+        if (_pendingKeyRelease != null)
+        {
+            keyboardSender.SendKey(_pendingKeyRelease.VirtualKey, KeyAction.Release);
+            lock (_inputLock) { _pressedKeys.Remove(_pendingKeyRelease.VirtualKey); }
+            _pendingKeyRelease = null;
+        }
+        if (_pendingMouseRelease != null)
+        {
+            mouseSender.SendMouseButton(_pendingMouseRelease.Button, KeyAction.Release);
+            lock (_inputLock) { _pressedMouseButtons.Remove(_pendingMouseRelease.Button); }
+            _pendingMouseRelease = null;
+        }
+    }
+
     private void ReleaseAllInputs()
     {
-        foreach (int vk in _pressedKeys)
-            keyboardSender.SendKey(vk, KeyAction.Release);
-        foreach (MouseButton btn in _pressedMouseButtons)
-            mouseSender.SendMouseButton(btn, KeyAction.Release);
+        lock (_inputLock)
+        {
+            foreach (int vk in _pressedKeys)
+                keyboardSender.SendKey(vk, KeyAction.Release);
+            foreach (MouseButton btn in _pressedMouseButtons)
+                mouseSender.SendMouseButton(btn, KeyAction.Release);
+        }
     }
 
     private void RepressAllInputs()
     {
-        foreach (int vk in _pressedKeys)
-            keyboardSender.SendKey(vk, KeyAction.Press);
-        foreach (MouseButton btn in _pressedMouseButtons)
-            mouseSender.SendMouseButton(btn, KeyAction.Press);
+        lock (_inputLock)
+        {
+            foreach (int vk in _pressedKeys)
+                keyboardSender.SendKey(vk, KeyAction.Press);
+            foreach (MouseButton btn in _pressedMouseButtons)
+                mouseSender.SendMouseButton(btn, KeyAction.Press);
+        }
     }
 
     private void ClearInputState()
     {
         StopAllKeyRepeats();
         ReleaseAllInputs();
-        _pressedKeys.Clear();
-        _pressedMouseButtons.Clear();
+        lock (_inputLock)
+        {
+            _pressedKeys.Clear();
+            _pressedMouseButtons.Clear();
+        }
     }
 
     public void Dispose()

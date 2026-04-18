@@ -167,7 +167,7 @@ public class MouseSlotTests : IDisposable
     public async Task PlayAsync_OscKeyboardMouseMixed_AllExecuted()
     {
         var slots = Slots(
-            new IntSlot("/input/Jump", 1, 10, false),
+            new IntSlot("/input/Jump", 1, 10, false, TransitionMode.None),
             new KeySingleSlot(0x20, KeyAction.Press, 10),
             new MouseButtonSlot(MouseButton.Left, KeyAction.Press, 10)
         );

@@ -1,6 +1,6 @@
 # Import / Export JSON スキーマ仕様
 
-シーケンスプロファイルを外部JSONとして書き出し・読み込みする際のフォーマット定義。  
+シーケンスプロファイルを外部JSONとして書き出し・読み込みする際のフォーマット定義。
 スクリプトやツールでシーケンスをプログラム的に生成・編集したい場合に参照する。
 
 ---
@@ -44,16 +44,32 @@
   "address": "/input/Vertical",
   "value": 0.5,
   "durationMs": 500,
-  "resetOnComplete": true
+  "resetOnComplete": true,
+  "transitionMode": "None",
+  "transitionFromValue": 0.0,
+  "transitionToValue": 1.0
 }
 ```
 
-| フィールド        | 型      | 範囲        | 説明                   |
-| ----------------- | ------- | ----------- | ---------------------- |
-| `address`         | string  | `/` 始まり  | OSC アドレス           |
-| `value`           | number  | -1.0 〜 1.0 | 送信する float 値      |
-| `durationMs`      | integer | ≥ 0         | 送信後の待機時間（ms） |
-| `resetOnComplete` | boolean | —           | 完了後に 0.0 に戻す    |
+| フィールド            | 型      | 説明                                             |
+| --------------------- | ------- | ------------------------------------------------ |
+| `address`             | string  | OSC アドレス（`/` 始まり）                       |
+| `value`               | number  | 送信する float 値（`transitionMode: "None"` 時） |
+| `durationMs`          | integer | 待機時間（ms）。補間時は補間継続時間             |
+| `resetOnComplete`     | boolean | 完了後に 0.0 に戻す                              |
+| `transitionMode`      | string  | 値の補間モード（下記参照）。省略時は `"None"`    |
+| `transitionFromValue` | number  | トランジション開始値                             |
+| `transitionToValue`   | number  | トランジション終了値                             |
+
+**transitionMode 値:**
+
+| 値            | 意味                   |
+| ------------- | ---------------------- |
+| `"None"`      | 補間なし（固定値送信） |
+| `"Linear"`    | 線形補間               |
+| `"EaseIn"`    | イーズイン             |
+| `"EaseOut"`   | イーズアウト           |
+| `"EaseInOut"` | イーズイン・アウト     |
 
 ---
 
@@ -65,16 +81,22 @@
   "address": "/input/Jump",
   "value": 1,
   "durationMs": 100,
-  "resetOnComplete": true
+  "resetOnComplete": true,
+  "transitionMode": "None",
+  "transitionFromValue": 0,
+  "transitionToValue": 1
 }
 ```
 
-| フィールド        | 型      | 説明                               |
-| ----------------- | ------- | ---------------------------------- |
-| `address`         | string  | OSC アドレス                       |
-| `value`           | integer | 送信する int 値（通常 0 または 1） |
-| `durationMs`      | integer | 待機時間（ms）                     |
-| `resetOnComplete` | boolean | 完了後に 0 に戻す                  |
+| フィールド            | 型      | 説明                                           |
+| --------------------- | ------- | ---------------------------------------------- |
+| `address`             | string  | OSC アドレス                                   |
+| `value`               | integer | 送信する int 値（`transitionMode: "None"` 時） |
+| `durationMs`          | integer | 待機時間（ms）。補間時は補間継続時間           |
+| `resetOnComplete`     | boolean | 完了後に 0 に戻す                              |
+| `transitionMode`      | string  | 補間モード（`float` セクション参照）           |
+| `transitionFromValue` | integer | トランジション開始値                           |
+| `transitionToValue`   | integer | トランジション終了値                           |
 
 ---
 

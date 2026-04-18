@@ -501,7 +501,7 @@ public class SequenceSlotViewModelTests
     public void FromModel_KnownAddress_SelectsMatchingPreset()
     {
         SequenceSlotViewModel vm = SequenceSlotViewModel.FromModel(
-            new FloatSlot("/input/Vertical", 0.5f));
+            new FloatSlot("/input/Vertical", 0.5f, 500, true, TransitionMode.None));
 
         vm.SelectedPreset.Should().BeOfType<BuiltinPreset>()
             .Which.Address.Should().Be("/input/Vertical");
@@ -512,7 +512,7 @@ public class SequenceSlotViewModelTests
     public void FromModel_UnknownAddress_SelectsCustomPreset()
     {
         SequenceSlotViewModel vm = SequenceSlotViewModel.FromModel(
-            new IntSlot("/custom/unknown", 1));
+            new IntSlot("/custom/unknown", 1, 500, true, TransitionMode.None));
 
         vm.SelectedPreset.IsCustom.Should().BeTrue();
         vm.CustomAddress.Should().Be("/custom/unknown");
@@ -539,9 +539,9 @@ public class SequenceSlotViewModelTests
         new LoopBeginSlot(0), // RepeatCount=0 は無限ループ
         new LoopEndSlot(),
         new WaitSlot(1000),
-        new FloatSlot("/input/Vertical", 0.5f, 300, true),
-        new IntSlot("/input/Jump",       1,    200, false),
+        new FloatSlot("/input/Vertical", 0.5f, 300, true,  TransitionMode.None),
+        new IntSlot("/input/Jump",       1,    200, false, TransitionMode.None),
         new BoolSlot("/custom/x",        false, 100, true),
-        new StringSlot("/custom/s",      "hi",  50),
+        new StringSlot("/custom/s",      "hi",  50,  true),
     };
 }

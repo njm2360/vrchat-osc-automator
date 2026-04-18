@@ -163,7 +163,7 @@ public class KeyboardSlotTests : IDisposable
     public async Task PlayAsync_OscAndKeySlotsMixed_BothExecuted()
     {
         var slots = Slots(
-            new IntSlot("/input/Jump", 1, 10, false),
+            new IntSlot("/input/Jump", 1, 10, false, TransitionMode.None),
             new KeySingleSlot(0x20, KeyAction.Press, 10)
         );
 

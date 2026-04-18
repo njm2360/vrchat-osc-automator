@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Reflection;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -10,8 +9,7 @@ namespace VrcOscAutomator.ViewModels;
 
 public sealed partial class MainWindowViewModel : ObservableObject
 {
-    public static string WindowTitle { get; } =
-        $"VRChat OSC Automator v{Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.0"}";
+    // ── 定数・依存サービス ────────────────────────────────────────────────
 
     private readonly ISequencePlayer _player;
     private readonly ISettingsRepository _repository;
@@ -21,11 +19,16 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly IKeyboardSender _keyboardSender;
     private readonly IMouseSender _mouseSender;
     private readonly ISequenceImportExportService _importExport;
+
+    // 設定ファイルから読み込んだ OSC 送信先・ホットキー・キーリピート設定
     private List<OscTarget> _targets = [];
     private HotkeySettings _hotkeys = new();
     private KeyRepeatSettings _keyRepeat = new();
 
+    // 実行中断用トークン
     private CancellationTokenSource? _cts;
+
+    // ── 実行状態 ──────────────────────────────────────────────────────────
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsNotPlaying))]
@@ -40,13 +43,20 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(PauseResumeCommand))]
     public partial bool IsPaused { get; set; }
 
+    public bool IsNotPlaying => !IsPlaying;
+
+    // ── プロファイル選択 ──────────────────────────────────────────────────
+
+    // タブ選択中のプロファイルインデックス
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StatusMessage))]
     [NotifyCanExecuteChangedFor(nameof(StartCommand))]
     public partial int SelectedProfileIndex { get; set; }
 
+    // プロファイル切り替え時に IsLoopMode の変更通知を出す
     partial void OnSelectedProfileIndexChanged(int value) => OnPropertyChanged("IsLoopMode");
 
+    // IsLoopMode は選択中プロファイルへのパススルー
     public bool IsLoopMode
     {
         get => SelectedProfileIndex >= 0 && SelectedProfileIndex < Profiles.Count
@@ -62,22 +72,30 @@ public sealed partial class MainWindowViewModel : ObservableObject
             }
         }
     }
+
+    // ── 入力モード設定 ────────────────────────────────────────────────────
+
+    // キーボード送信方式（VirtualKey / ScanCode）
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsKeyboardVkMode))]
     [NotifyPropertyChangedFor(nameof(IsKeyboardScanMode))]
     public partial KeyboardInputMode KeyboardMode { get; set; } = KeyboardInputMode.ScanCode;
 
+    // マウス座標系（Standard=物理ピクセル / VirtualDesktop=仮想デスクトップ正規化座標）
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsMouseStandardMode))]
     [NotifyPropertyChangedFor(nameof(IsMouseVirtualDesktopMode))]
     public partial MouseInputMode MouseMode { get; set; } = MouseInputMode.VirtualDesktop;
 
+    // RadioButton バインディング用: 各入力モードを bool に変換
     public bool IsKeyboardVkMode => KeyboardMode == KeyboardInputMode.VirtualKey;
     public bool IsKeyboardScanMode => KeyboardMode == KeyboardInputMode.ScanCode;
     public bool IsMouseStandardMode => MouseMode == MouseInputMode.Standard;
     public bool IsMouseVirtualDesktopMode => MouseMode == MouseInputMode.VirtualDesktop;
 
-    public bool IsNotPlaying => !IsPlaying;
+    // ── Start CanExecute / ステータス表示 ────────────────────────────────
+
+    // 送信先が有効・スロットが存在・全スロットが有効の場合のみ再生可能
     private bool CanStart => IsNotPlaying
         && Profiles.Count > 0
         && SelectedProfileIndex >= 0 && SelectedProfileIndex < Profiles.Count
@@ -85,6 +103,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         && Profiles[SelectedProfileIndex].Slots.Count > 0
         && Profiles[SelectedProfileIndex].AllSlotsValid;
 
+    // 実行できない理由をユーザーに表示するメッセージ
     public string StatusMessage
     {
         get
@@ -100,6 +119,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
             return string.Empty;
         }
     }
+
+    // ── プロファイル一覧 ──────────────────────────────────────────────────
+
     public ObservableCollection<ProfileViewModel> Profiles { get; } = [];
 
     public MainWindowViewModel(
@@ -128,6 +150,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         AddProfileInternal("Profile 1");
     }
 
+    // プロファイルを追加し、スロット変更・IsLoopMode変更の監視を設定する内部ヘルパー
     private ProfileViewModel AddProfileInternal(string name)
     {
         var profile = new ProfileViewModel(_dialogService, _importExport) { Name = name };
@@ -153,35 +176,36 @@ public sealed partial class MainWindowViewModel : ObservableObject
         return profile;
     }
 
+    // ── ホットキー ────────────────────────────────────────────────────────
+
+    // Windowハンドル取得後に呼ぶ（WM_HOTKEYの登録にHWNDが必要なため）
     public void InitializeHotkeys(Window window)
     {
         _hotkeyService.Initialize(window);
         _hotkeyService.UpdateSettings(_hotkeys);
     }
 
-    private void OnHotkeyStartPressed()
-    {
-        if (CanStart) _ = StartAsync();
-    }
+    private void OnHotkeyStartPressed() { if (CanStart) _ = StartAsync(); }
+    private void OnHotkeyPauseResumePressed() { if (IsPlaying) _ = PauseResumeAsync(); }
+    private void OnHotkeyStopPressed() { if (IsPlaying) _ = StopAsync(); }
 
-    private void OnHotkeyPauseResumePressed()
-    {
-        if (IsPlaying) _ = PauseResumeAsync();
-    }
+    // ── 再生中のスロット進捗更新 ──────────────────────────────────────────
 
-    private void OnHotkeyStopPressed()
-    {
-        if (IsPlaying) _ = StopAsync();
-    }
-
-    private void OnSlotChanged(int index)
+    // IProgress<SequenceProgress> コールバック: 現在スロットと反復回数を各VMに反映
+    private void OnSlotChanged(SequenceProgress progress)
     {
         ProfileViewModel profile = Profiles[SelectedProfileIndex];
         for (int i = 0; i < profile.Slots.Count; i++)
-            profile.Slots[i].IsCurrentSlot = (i == index);
+        {
+            profile.Slots[i].IsCurrentSlot = i == progress.SlotIndex;
+            profile.Slots[i].CurrentIteration = progress.LoopIterations.TryGetValue(i, out int iter) ? iter : 0;
+        }
         IsPaused = _player.IsPaused;
     }
 
+    // ── プロファイル操作コマンド ──────────────────────────────────────────
+
+    // 重複しない名前で新規プロファイルを追加
     [RelayCommand]
     private async Task AddProfileAsync()
     {
@@ -192,6 +216,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         await SaveAsync();
     }
 
+    // 確認ダイアログ後に削除し、隣のプロファイルを選択
     [RelayCommand]
     private async Task DeleteProfileAsync(ProfileViewModel profile)
     {
@@ -202,10 +227,16 @@ public sealed partial class MainWindowViewModel : ObservableObject
         await SaveAsync();
     }
 
+    // ── アプリケーションライフサイクル ────────────────────────────────────
+
+    // Window.Loaded: 設定を読み込みプロファイルと各種設定を復元
     [RelayCommand]
     private async Task LoadedAsync()
     {
-        AppSettings settings = await _repository.LoadAsync();
+        SettingsLoadResult loadResult = await _repository.LoadAsync();
+        if (loadResult.WasCorrupted)
+            _dialogService.ShowError(loadResult.CorruptionDetail!);
+        AppSettings settings = loadResult.Settings;
         _targets = settings.Targets;
         _oscSender.SetTargets(_targets);
         _hotkeys = settings.Hotkeys;
@@ -234,6 +265,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         StartCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(StatusMessage));
     }
+
+    // ── 設定ダイアログ系コマンド ──────────────────────────────────────────
 
     [RelayCommand]
     private async Task OpenTargetsWindowAsync()
@@ -274,6 +307,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void OpenAboutWindow() => _dialogService.ShowAboutWindow();
+
+    [RelayCommand]
     private async Task SetKeyboardModeAsync(KeyboardInputMode mode)
     {
         KeyboardMode = mode;
@@ -289,6 +325,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
         await SaveAsync();
     }
 
+    // ── 実行コマンド ──────────────────────────────────────────────────────
+
+    // 実行開始: スロットをModelに変換してプレイヤーに渡す
+    // （完了・例外どちらでもIsPlayingをリセット）
     [RelayCommand(CanExecute = nameof(CanStart))]
     private async Task StartAsync()
     {
@@ -303,7 +343,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         try
         {
-            var progress = new Progress<int>(OnSlotChanged);
+            var progress = new Progress<SequenceProgress>(OnSlotChanged);
             await _player.PlayAsync(slots, IsLoopMode, progress, _cts.Token);
         }
         finally
@@ -339,8 +379,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private static void Close() => Application.Current.MainWindow?.Close();
 
+    // Window.Closing: 終了前に設定を保存
     [RelayCommand]
     private async Task ClosingAsync() => await SaveAsync();
+
+    // ── 設定永続化 ────────────────────────────────────────────────────────
 
     private async Task SaveAsync()
     {

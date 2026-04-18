@@ -79,24 +79,32 @@ Singleton を選んだ理由: 各サービスはアプリ全体でひとつの�
 
 #### OSC 系スロット（`OscSlot` 中間抽象から派生）
 
-| 型           | discriminator | パラメーター                                                 |
-| ------------ | ------------- | ------------------------------------------------------------ |
-| `FloatSlot`  | `"float"`     | `Address`, `Value` (float), `DurationMs`, `ResetOnComplete`  |
-| `IntSlot`    | `"int"`       | `Address`, `Value` (int), `DurationMs`, `ResetOnComplete`    |
-| `BoolSlot`   | `"bool"`      | `Address`, `Value` (bool), `DurationMs`, `ResetOnComplete`   |
-| `StringSlot` | `"string"`    | `Address`, `Value` (string), `DurationMs`, `ResetOnComplete` |
+| 型           | discriminator | パラメーター                                                                                                                              |
+| ------------ | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `FloatSlot`  | `"float"`     | `Address`, `Value` (float), `DurationMs`, `ResetOnComplete`, `TransitionMode`, `TransitionFromValue` (float), `TransitionToValue` (float) |
+| `IntSlot`    | `"int"`       | `Address`, `Value` (int), `DurationMs`, `ResetOnComplete`, `TransitionMode`, `TransitionFromValue` (int), `TransitionToValue` (int)       |
+| `BoolSlot`   | `"bool"`      | `Address`, `Value` (bool), `DurationMs`, `ResetOnComplete`                                                                                |
+| `StringSlot` | `"string"`    | `Address`, `Value` (string), `DurationMs`, `ResetOnComplete`                                                                              |
 
 `ResetOnComplete` が `true` の場合、スロット実行後に OSC 値を既定値（float→0、int→0、bool→false、string→""）にリセットする。
 
+`TransitionMode` が `None` 以外の場合、`DurationMs` の時間をかけて `TransitionFromValue` から `TransitionToValue` へ値を補間しながら送信する（FloatSlot・IntSlot のみ対応）。
+
+#### 関連 Enum（TransitionMode）
+
+```csharp
+enum TransitionMode { None, Linear, EaseIn, EaseOut, EaseInOut }
+```
+
 #### 制御フロースロット
 
-| 型               | discriminator   | パラメーター           | 動作                                  |
-| ---------------- | --------------- | ---------------------- | ------------------------------------- |
-| `WaitSlot`       | `"wait"`        | `DurationMs`           | 指定時間待機のみ                      |
-| `RandomWaitSlot` | `"random_wait"` | `MinMs`, `MaxMs`       | MinMs〜MaxMs のランダム時間待機       |
-| `LoopBeginSlot`  | `"loop_begin"`  | `RepeatCount`          | ループ開始マーカー。0 = 無限ループ    |
-| `LoopEndSlot`    | `"loop_end"`    | なし                   | ループ終了マーカー                    |
-| `BreakpointSlot` | `"breakpoint"`  | なし                   | 実行を一時停止                        |
+| 型               | discriminator   | パラメーター     | 動作                               |
+| ---------------- | --------------- | ---------------- | ---------------------------------- |
+| `WaitSlot`       | `"wait"`        | `DurationMs`     | 指定時間待機のみ                   |
+| `RandomWaitSlot` | `"random_wait"` | `MinMs`, `MaxMs` | MinMs〜MaxMs のランダム時間待機    |
+| `LoopBeginSlot`  | `"loop_begin"`  | `RepeatCount`    | ループ開始マーカー。0 = 無限ループ |
+| `LoopEndSlot`    | `"loop_end"`    | なし             | ループ終了マーカー                 |
+| `BreakpointSlot` | `"breakpoint"`  | なし             | 実行を一時停止                     |
 
 #### キーボードスロット
 
@@ -120,6 +128,7 @@ enum KeyAction     { Press, Release, PressAndRelease }
 enum MouseButton   { Left, Right, Middle }
 enum MouseMoveMode { Relative, Absolute }
 enum OscValueType  { Float, Int, Bool, String }
+// TransitionMode は FloatSlot / IntSlot のセクション参照
 ```
 
 ---
@@ -208,7 +217,7 @@ void SendBool(string address, bool value)
 void SendString(string address, string value)
 ```
 
-**実装詳細:**  
+**実装詳細:**
 `UdpClient` を使用。`SetTargets` で有効な送信先リストを更新し、送信時は全有効ターゲットに同一パケットをブロードキャストする。パケット構造の詳細は [セクション 9](#9-osc-パケット仕様) を参照。
 
 ---
@@ -219,15 +228,15 @@ void SendString(string address, string value)
 
 ```csharp
 Task PlayAsync(IReadOnlyList<SequenceSlot> slots, bool loop,
-               IProgress<int>? slotProgress, CancellationToken cancellationToken)
+               IProgress<SequenceProgress>? slotProgress, CancellationToken cancellationToken)
 Task PauseAsync()
 Task ResumeAsync()
 Task StopAsync()
 void SetKeyRepeatSettings(KeyRepeatSettings settings)
 
 bool IsPlaying { get; }
-bool IsPaused { get; set; }
-int CurrentSlotIndex { get; set; }
+bool IsPaused { get; }
+int CurrentSlotIndex { get; }
 ```
 
 実行の詳細は [セクション 8](#8-シーケンス実行エンジン詳細) を参照。
@@ -244,13 +253,13 @@ void SendKey(int virtualKey, KeyAction action)
 void TypeString(string text)
 ```
 
-**ScanCode モード（デフォルト）:**  
+**ScanCode モード（デフォルト）:**
 `MapVirtualKey(vk, MAPVK_VK_TO_VSC)` で VK コードをスキャンコードに変換し、`KEYEVENTF_SCANCODE` フラグで送信。ゲームやエミュレータとの互換性が高い。
 
-**VirtualKey モード:**  
+**VirtualKey モード:**
 `wVk` フィールドに VK コードを直接セット。`wScan = 0`。
 
-**拡張キーフラグ:**  
+**拡張キーフラグ:**
 以下の VK コードは `KEYEVENTF_EXTENDEDKEY` フラグが必要：
 
 | VK        | キー     | VK        | キー         |
@@ -264,7 +273,7 @@ void TypeString(string text)
 | 0x90      | NumLock  | 0xA3      | RCtrl        |
 | 0xA5      | RAlt     | 0xAD-0xB3 | メディアキー |
 
-**文字入力 (TypeString):**  
+**文字入力 (TypeString):**
 `\n` / `\r` → Return キーのプレス/リリース。それ以外の文字は `KEYEVENTF_UNICODE` フラグで `wScan` フィールドに文字コードをセットして送信。
 
 ---
@@ -308,7 +317,7 @@ normalized_y = (long)y * 65535 / sh
 flags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE
 ```
 
-*相対モード:*  
+*相対モード:*
 `flags = MOUSEEVENTF_MOVE`（dx, dy がピクセル単位の移動量）
 
 ---
@@ -338,7 +347,7 @@ event Action? StopPressed
 | 9002 | PauseResume |
 | 9003 | Stop        |
 
-**WM_HOTKEY (0x0312) 受信時:**  
+**WM_HOTKEY (0x0312) 受信時:**
 `wParam` の値 (9001/9002/9003) に応じて対応するイベントを発火。
 
 **ModifierKeys 変換:**
@@ -384,14 +393,15 @@ ProfileExportData? Import(string input)
 **役割:** モーダルウィンドウ・メッセージボックスを一元管理し、ViewModel からの直接 View 参照を排除する。
 
 ```csharp
-void ShowExportDialog(string json)
+void ShowExportDialog(string exportData)
 string? ShowImportDialog()
 bool ConfirmOverwrite()
 void ShowError(string message)
-IEnumerable<OscTarget>? ShowSendTargetsWindow(IEnumerable<OscTarget> targets)
-HotkeySettings? ShowHotkeySettingsWindow(HotkeySettings current)
-KeyRepeatSettings? ShowKeyRepeatSettingsWindow(KeyRepeatSettings current)
+IReadOnlyList<OscTarget>? ShowSendTargetsWindow(IEnumerable<OscTarget> currentTargets)
+HotkeySettings? ShowHotkeySettingsWindow(HotkeySettings currentSettings)
+KeyRepeatSettings? ShowKeyRepeatSettingsWindow(KeyRepeatSettings currentSettings)
 bool ConfirmDeleteProfile(string profileName)
+void ShowAboutWindow()
 ```
 
 ---
@@ -422,10 +432,10 @@ bool ConfirmDeleteProfile(string profileName)
 | `StatusMessage` | 実行状態に応じた表示文字列                                 |
 | `IsLoopMode`    | 選択中プロファイルの `IsLoopMode` への転送                 |
 
-**コマンド:**  
+**コマンド:**
 `StartCommand`、`PauseResumeCommand`、`StopCommand` は `CanExecute` 条件付き。起動時に `LoadedCommand` でファイルから設定を読み込み、`GlobalHotkeyService.Initialize` を呼ぶ。
 
-**ホットキーイベント処理:**  
+**ホットキーイベント処理:**
 `GlobalHotkeyService` の各イベントに対し、UIスレッドへのディスパッチを経由して対応コマンドを実行。
 
 ---
@@ -445,7 +455,7 @@ bool ConfirmDeleteProfile(string profileName)
 | `Slots`         | ObservableCollection   | スロット一覧                       |
 | `AllSlotsValid` | bool                   | 全スロットが有効か（computed）     |
 
-**コマンド:**  
+**コマンド:**
 `AddSlot`、`RemoveSlot`（選択時のみ有効）、`CopySlot`（選択時のみ有効）、`MoveUp` / `MoveDown`（境界チェック付き）、`Export`、`Import`
 
 ---
@@ -461,7 +471,7 @@ SequenceSlot ToModel()        // ViewModel → Model 変換
 static SequenceSlotViewModel FromModel(SequenceSlot slot)  // Model → ViewModel 変換
 ```
 
-**プリセット選択と UI 可視性:**  
+**プリセット選択と UI 可視性:**
 `SelectedPreset` が変わると `IsFloatMode`・`IsIntMode`・`IsBoolMode`・`IsStringMode`・`IsKeyboardSingleMode`・`IsMouseButtonMode`…等のプロパティが再計算され、DataGrid の行展開ディテール内の各 UI セクションの `Visibility` が切り替わる。
 
 **バリデーション:**
@@ -474,7 +484,7 @@ bool IsValid =>
 
 OSC アドレスは `^/[^\s]*$` に一致する必要がある。`CustomPreset` 以外では常に `true`。
 
-**ParameterSummary:**  
+**ParameterSummary:**
 スロット型とパラメーターから人間が読みやすい要約文字列を生成する computed プロパティ。DataGrid の「パラメータ」列に表示される。
 
 ---
@@ -620,10 +630,10 @@ Grid (2カラム)
     └── エクスポート / インポート
 ```
 
-**バリデーション表示:**  
+**バリデーション表示:**
 `IsValid = false` の行は背景色が `#FFDDDD`（薄赤）になる。
 
-**ComboBox グループ表示:**  
+**ComboBox グループ表示:**
 プリセット ComboBox はカテゴリ名を太字グレーのヘッダーで区切った GroupStyle で表示。`ListCollectionView` でグルーピング実装。
 
 ---
@@ -637,7 +647,7 @@ Grid (2カラム)
 | `InverseBoolToVisibilityConverter` | `true` → `Collapsed`、`false` → `Visible`                               |
 | `FloatToIntBoolConverter`          | `float == ConverterParameter(int)` → RadioButton の IsChecked（双方向） |
 
-**FloatToIntBoolConverter の用途:**  
+**FloatToIntBoolConverter の用途:**
 Int プリセットの ON/OFF RadioButton を `IntValue` (0 または 1) にバインドするために使用。`ConverterParameter="1"` で ON ボタン、`ConverterParameter="0"` で OFF ボタン。
 
 ---
@@ -752,11 +762,11 @@ do {
 
 ### 8.2 ループスタックの動作
 
-`Stack<(int startIndex, int remaining)>` を使用。
+`Stack<(int startIndex, int remaining, int iteration)>` を使用。`iteration` はループの現在の繰り返し回数（1始まり）で、進捗表示用に `SequenceProgress.LoopIterations` に反映される。
 
-- **LoopBeginSlot 到達時:** `(i, RepeatCount)` をプッシュし、次スロットへ
+- **LoopBeginSlot 到達時:** `(i, RepeatCount, 1)` をプッシュし、次スロットへ
 - **LoopEndSlot 到達時:** スタックからポップし、`remaining` を評価:
-  - `remaining == 0`（無限ループ）または `remaining > 1`（まだ残あり）→ `(startIndex, remaining == 0 ? 0 : remaining - 1)` を再プッシュし、`i = startIndex + 1`
+  - `remaining == 0`（無限ループ）または `remaining > 1`（まだ残あり）→ `(startIndex, remaining == 0 ? 0 : remaining - 1, iteration + 1)` を再プッシュし、`i = startIndex + 1`
   - `remaining == 1`（最後の繰り返し完了）→ 次スロットへ
 
 **ネストの例:**
@@ -787,7 +797,7 @@ do {
 [実行中]
 ```
 
-**SlotDelayAsync の中断処理:**  
+**SlotDelayAsync の中断処理:**
 `_pauseCts`（stopCt にリンクした CancellationTokenSource）を用いて `Task.Delay` を中断。中断後は経過時間を計算し、再開後に残り時間だけ再待機する。stopCt によるキャンセルの場合は例外を再スローして終了。
 
 ### 8.4 キーリピートループ
@@ -807,16 +817,17 @@ StartKeyRepeat(vk, stopCt) が呼ばれる
 
 ### 8.5 入力状態追跡
 
-| 変数                   | 型                     | 内容                                        |
-| ---------------------- | ---------------------- | ------------------------------------------- |
-| `_pressedKeys`         | `HashSet<int>`         | 現在押下中の仮想キーコード                  |
-| `_pressedMouseButtons` | `HashSet<MouseButton>` | 現在押下中のマウスボタン                    |
-| `_pendingKeyRelease`   | `int?`                 | PressAndRelease の Press 後、解放待ちのキー |
+| 変数                   | 型                     | 内容                                                |
+| ---------------------- | ---------------------- | --------------------------------------------------- |
+| `_pressedKeys`         | `HashSet<int>`         | 現在押下中の仮想キーコード                          |
+| `_pressedMouseButtons` | `HashSet<MouseButton>` | 現在押下中のマウスボタン                            |
+| `_pendingKeyRelease`   | `KeySingleSlot?`       | PressAndRelease の Press 後、解放待ちのキースロット |
+| `_pendingMouseRelease` | `MouseButtonSlot?`     | PressAndRelease の Press 後、解放待ちのマウスボタン |
 
 `PressAndRelease` アクション実行時:
 1. Press を送信
-2. `_pendingKeyRelease = vk` をセット
-3. `SlotDelayAsync` 終了後に Release を送信し、`_pendingKeyRelease = null`
+2. `_pendingKeyRelease` / `_pendingMouseRelease` にスロットをセット
+3. `SlotDelayAsync` 終了後（`FlushPendingReleases` 内）に Release を送信し、フィールドを `null` にリセット
 
 ---
 

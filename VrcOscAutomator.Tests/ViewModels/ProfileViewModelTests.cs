@@ -422,7 +422,7 @@ public class ProfileViewModelTests
         _sut.AddSlotCommand.Execute(null);
         _dialog.Setup(d => d.ShowImportDialog()).Returns("data");
         _importExport.Setup(s => s.Import("data")).Returns(
-            new ProfileExportData("", [new IntSlot("/input/Jump", 1)], false));
+            new ProfileExportData("", [new IntSlot("/input/Jump", 1, 500, true, TransitionMode.None)], false));
         _dialog.Setup(d => d.ConfirmOverwrite()).Returns(false);
 
         _sut.ImportCommand.Execute(null);
@@ -436,8 +436,8 @@ public class ProfileViewModelTests
         _sut.AddSlotCommand.Execute(null);
         var importedSlots = new SequenceSlot[]
         {
-            new IntSlot("/input/Jump",  1),
-            new IntSlot("/input/Voice", 1),
+            new IntSlot("/input/Jump",  1, 500, true, TransitionMode.None),
+            new IntSlot("/input/Voice", 1, 500, true, TransitionMode.None),
         };
         _dialog.Setup(d => d.ShowImportDialog()).Returns("data");
         _importExport.Setup(s => s.Import("data")).Returns(new ProfileExportData("", [.. importedSlots], false));
@@ -451,7 +451,7 @@ public class ProfileViewModelTests
     [Fact]
     public void Import_NoExistingSlots_NoConfirmRequired()
     {
-        var importedSlots = new SequenceSlot[] { new IntSlot("/input/Jump", 1) };
+        var importedSlots = new SequenceSlot[] { new IntSlot("/input/Jump", 1, 500, true, TransitionMode.None) };
         _dialog.Setup(d => d.ShowImportDialog()).Returns("data");
         _importExport.Setup(s => s.Import("data")).Returns(new ProfileExportData("", [.. importedSlots], false));
 
@@ -488,7 +488,7 @@ public class ProfileViewModelTests
             IsLoopMode = true,
             Slots =
             [
-                new IntSlot("/input/Jump", 1),
+                new IntSlot("/input/Jump", 1, 500, true, TransitionMode.None),
                 new WaitSlot(500),
             ],
         };
@@ -510,7 +510,7 @@ public class ProfileViewModelTests
             Slots =
             [
                 new LoopBeginSlot(3),
-                new IntSlot("/input/Jump", 1, 200),
+                new IntSlot("/input/Jump", 1, 200, true, TransitionMode.None),
                 new LoopEndSlot(),
             ],
         };
@@ -623,7 +623,7 @@ public class ProfileViewModelTests
         _sut.Name = "OldName";
         _dialog.Setup(d => d.ShowImportDialog()).Returns("data");
         _importExport.Setup(s => s.Import("data"))
-            .Returns(new ProfileExportData("NewName", [new IntSlot("/x", 1)], false));
+            .Returns(new ProfileExportData("NewName", [new IntSlot("/x", 1, 500, true, TransitionMode.None)], false));
 
         _sut.ImportCommand.Execute(null);
 
@@ -636,7 +636,7 @@ public class ProfileViewModelTests
         _sut.Name = "KeepMe";
         _dialog.Setup(d => d.ShowImportDialog()).Returns("data");
         _importExport.Setup(s => s.Import("data"))
-            .Returns(new ProfileExportData("", [new IntSlot("/x", 1)], false));
+            .Returns(new ProfileExportData("", [new IntSlot("/x", 1, 500, true, TransitionMode.None)], false));
 
         _sut.ImportCommand.Execute(null);
 
@@ -648,7 +648,7 @@ public class ProfileViewModelTests
     {
         _dialog.Setup(d => d.ShowImportDialog()).Returns("data");
         _importExport.Setup(s => s.Import("data"))
-            .Returns(new ProfileExportData("", [new IntSlot("/x", 1)], true));
+            .Returns(new ProfileExportData("", [new IntSlot("/x", 1, 500, true, TransitionMode.None)], true));
 
         _sut.ImportCommand.Execute(null);
 

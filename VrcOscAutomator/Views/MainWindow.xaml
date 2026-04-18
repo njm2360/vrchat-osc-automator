@@ -6,7 +6,7 @@
         xmlns:models="clr-namespace:VrcOscAutomator.Models"
         xmlns:conv="clr-namespace:VrcOscAutomator.Converters"
         xmlns:b="clr-namespace:VrcOscAutomator.Behaviors"
-        Title="{Binding WindowTitle}"
+        Title="VRChat OSC Automator"
         Height="400" Width="600"
         MinHeight="400" MinWidth="600"
         ResizeMode="CanResize">
@@ -275,6 +275,15 @@
                               Command="{Binding SetMouseModeCommand}"
                               CommandParameter="{x:Static models:MouseInputMode.VirtualDesktop}" />
                 </MenuItem>
+            </MenuItem>
+            <MenuItem Header="ヘルプ(_H)">
+                <MenuItem Header="GitHub(_G)" Click="HelpGitHub_Click" />
+                <MenuItem Header="使用方法(_U)" Click="HelpManual_Click" />
+                <Separator />
+                <MenuItem Header="サードパーティライセンス(_L)" Click="HelpLicense_Click" />
+                <Separator />
+                <MenuItem Header="バージョン情報(_A)..."
+                          Command="{Binding OpenAboutWindowCommand}" />
             </MenuItem>
         </Menu>
 
