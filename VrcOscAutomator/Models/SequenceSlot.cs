@@ -17,13 +17,19 @@ namespace VrcOscAutomator.Models;
 [JsonDerivedType(typeof(MouseWheelSlot), "mouse_wheel")]
 [JsonDerivedType(typeof(MouseMoveSlot), "mouse_move")]
 [JsonDerivedType(typeof(BreakpointSlot), "breakpoint")]
-public abstract record SequenceSlot;
+public abstract record SequenceSlot
+{
+    public virtual int GetDurationMs() => 0;
+}
 
 /// <summary>OSC を送信する基底スロット。</summary>
 public abstract record OscSlot(
     string Address,
     int DurationMs,
-    bool ResetOnComplete) : SequenceSlot;
+    bool ResetOnComplete) : SequenceSlot
+{
+    public override int GetDurationMs() => DurationMs;
+}
 
 /// <summary>Float 値を送信するスロット（-1.0〜+1.0）。</summary>
 public record FloatSlot(
@@ -54,10 +60,16 @@ public record StringSlot(
     bool ResetOnComplete = true) : OscSlot(Address, DurationMs, ResetOnComplete);
 
 /// <summary>OSC を送信せず待機するスロット。</summary>
-public record WaitSlot(int DurationMs = 500) : SequenceSlot;
+public record WaitSlot(int DurationMs = 500) : SequenceSlot
+{
+    public override int GetDurationMs() => DurationMs;
+}
 
 /// <summary>MinMs〜MaxMs のランダム時間待機するスロット。</summary>
-public record RandomWaitSlot(int MinMs = 300, int MaxMs = 1000) : SequenceSlot;
+public record RandomWaitSlot(int MinMs = 300, int MaxMs = 1000) : SequenceSlot
+{
+    public override int GetDurationMs() => Random.Shared.Next(MinMs, MaxMs + 1);
+}
 
 /// <summary>繰り返しブロックの開始マーカー。</summary>
 public record LoopBeginSlot(int RepeatCount = 2) : SequenceSlot;
@@ -69,21 +81,36 @@ public record LoopEndSlot() : SequenceSlot;
 public record BreakpointSlot() : SequenceSlot;
 
 /// <summary>単一キーを PRESS または RELEASE するスロット。</summary>
-public record KeySingleSlot(int VirtualKey, KeyAction Action, int DurationMs = 0) : SequenceSlot;
+public record KeySingleSlot(int VirtualKey, KeyAction Action, int DurationMs = 0) : SequenceSlot
+{
+    public override int GetDurationMs() => DurationMs;
+}
 
 /// <summary>文字列をキーボード入力として送信するスロット。</summary>
-public record KeyTypeStringSlot(string Text, bool AppendNewline = false, int DurationMs = 0) : SequenceSlot;
+public record KeyTypeStringSlot(string Text, bool AppendNewline = false, int DurationMs = 0) : SequenceSlot
+{
+    public override int GetDurationMs() => DurationMs;
+}
 
 public enum KeyAction { Press, Release, PressAndRelease }
 
 /// <summary>マウスボタンを PRESS または RELEASE するスロット。</summary>
-public record MouseButtonSlot(MouseButton Button, KeyAction Action, int DurationMs = 0) : SequenceSlot;
+public record MouseButtonSlot(MouseButton Button, KeyAction Action, int DurationMs = 0) : SequenceSlot
+{
+    public override int GetDurationMs() => DurationMs;
+}
 
 /// <summary>マウスホイールをスクロールするスロット。正値=上、負値=下。</summary>
-public record MouseWheelSlot(int Clicks, int DurationMs = 0) : SequenceSlot;
+public record MouseWheelSlot(int Clicks, int DurationMs = 0) : SequenceSlot
+{
+    public override int GetDurationMs() => DurationMs;
+}
 
 /// <summary>マウスカーソルを移動するスロット。</summary>
-public record MouseMoveSlot(int X, int Y, MouseMoveMode Mode, int DurationMs = 0) : SequenceSlot;
+public record MouseMoveSlot(int X, int Y, MouseMoveMode Mode, int DurationMs = 0) : SequenceSlot
+{
+    public override int GetDurationMs() => DurationMs;
+}
 
 public enum MouseButton { Left, Right, Middle }
 
