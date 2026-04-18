@@ -276,6 +276,12 @@
                               CommandParameter="{x:Static models:MouseInputMode.VirtualDesktop}" />
                 </MenuItem>
             </MenuItem>
+            <MenuItem Header="ヘルプ(_H)">
+                <MenuItem Header="GitHub(_G)" Click="HelpGitHub_Click" />
+                <MenuItem Header="使用方法(_U)" Click="HelpManual_Click" />
+                <Separator />
+                <MenuItem Header="サードパーティライセンス(_L)" Click="HelpLicense_Click" />
+            </MenuItem>
         </Menu>
 
         <!-- ===== 最下部: ステータスバー ===== -->

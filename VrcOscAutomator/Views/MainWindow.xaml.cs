@@ -1,4 +1,5 @@
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -51,6 +52,15 @@ public partial class MainWindow : Window
                 sv.ScrollToRightEnd();
         });
     }
+
+    private void HelpGitHub_Click(object sender, RoutedEventArgs e) =>
+        Process.Start(new ProcessStartInfo("https://github.com/njm2360/vrchat-osc-automator") { UseShellExecute = true });
+
+    private void HelpManual_Click(object sender, RoutedEventArgs e) =>
+        Process.Start(new ProcessStartInfo("https://github.com/njm2360/vrchat-osc-automator/blob/main/docs/user-manual.md") { UseShellExecute = true });
+
+    private void HelpLicense_Click(object sender, RoutedEventArgs e) =>
+        Process.Start(new ProcessStartInfo("https://github.com/njm2360/vrchat-osc-automator/blob/main/THIRD_PARTY_NOTICES.md") { UseShellExecute = true });
 
     private void TabControl_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
     {
