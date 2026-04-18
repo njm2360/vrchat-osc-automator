@@ -36,6 +36,7 @@
                   AutoGenerateColumns="False"
                   CanUserAddRows="False"
                   CanUserDeleteRows="False"
+                  CanUserSortColumns="False"
                   SelectionUnit="FullRow"
                   HeadersVisibility="Column"
                   RowDetailsVisibilityMode="VisibleWhenSelected"
