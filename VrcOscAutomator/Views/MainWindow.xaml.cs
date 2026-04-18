@@ -62,6 +62,27 @@ public partial class MainWindow : Window
     private void HelpLicense_Click(object sender, RoutedEventArgs e) =>
         Process.Start(new ProcessStartInfo("https://github.com/njm2360/vrchat-osc-automator/blob/main/THIRD_PARTY_NOTICES.md") { UseShellExecute = true });
 
+    protected override void OnPreviewKeyDown(KeyEventArgs e)
+    {
+        base.OnPreviewKeyDown(e);
+        if ((Keyboard.Modifiers & ModifierKeys.Control) == 0) return;
+
+        int index = e.Key switch
+        {
+            Key.D1 => 0, Key.D2 => 1, Key.D3 => 2,
+            Key.D4 => 3, Key.D5 => 4, Key.D6 => 5,
+            Key.D7 => 6, Key.D8 => 7, Key.D9 => 8,
+            Key.D0 => 9,
+            _ => -1,
+        };
+
+        if (index >= 0 && DataContext is MainWindowViewModel vm && index < vm.Profiles.Count)
+        {
+            vm.SelectedProfileIndex = index;
+            e.Handled = true;
+        }
+    }
+
     private void TabControl_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
     {
         if (sender is TabControl tc &&
