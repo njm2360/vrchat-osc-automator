@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Reflection;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -11,9 +10,6 @@ namespace VrcOscAutomator.ViewModels;
 public sealed partial class MainWindowViewModel : ObservableObject
 {
     // ── 定数・依存サービス ────────────────────────────────────────────────
-
-    public static string WindowTitle { get; } =
-        $"VRChat OSC Automator v{Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.0"}";
 
     private readonly ISequencePlayer _player;
     private readonly ISettingsRepository _repository;
@@ -306,6 +302,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
             await SaveAsync();
         }
     }
+
+    [RelayCommand]
+    private void OpenAboutWindow() => _dialogService.ShowAboutWindow();
 
     [RelayCommand]
     private async Task SetKeyboardModeAsync(KeyboardInputMode mode)

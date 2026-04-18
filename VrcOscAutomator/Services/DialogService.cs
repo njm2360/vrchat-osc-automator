@@ -87,4 +87,10 @@ public sealed class DialogService : IDialogService
         };
         return window.ShowDialog() == true ? viewModel.ToSettings() : null;
     }
+
+    public void ShowAboutWindow()
+    {
+        AboutWindow window = new() { Owner = Application.Current.MainWindow };
+        window.ShowDialog();
+    }
 }

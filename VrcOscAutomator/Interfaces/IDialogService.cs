@@ -19,4 +19,6 @@ public interface IDialogService
     KeyRepeatSettings? ShowKeyRepeatSettingsWindow(KeyRepeatSettings currentSettings);
 
     bool ConfirmDeleteProfile(string profileName);
+
+    void ShowAboutWindow();
 }
