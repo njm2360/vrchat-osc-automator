@@ -5,6 +5,7 @@ namespace VrcOscAutomator.ViewModels;
 
 public sealed partial class SequenceSlotViewModel
 {
+    // VM => SequenceSlot
     public SequenceSlot ToModel() => SelectedPreset switch
     {
         LoopBeginPreset => new LoopBeginSlot(RepeatCount),
@@ -22,6 +23,7 @@ public sealed partial class SequenceSlotViewModel
         _ => throw new UnreachableException(),
     };
 
+    // OSCスロットの組み立てヘルパー
     private SequenceSlot OscSlot(string address, OscValueType vt) => vt switch
     {
         OscValueType.Int => new IntSlot(address, IntValue, DurationMs, ResetOnComplete,
@@ -32,6 +34,7 @@ public sealed partial class SequenceSlotViewModel
             TransitionMode, FloatTransitionFrom, FloatTransitionTo),
     };
 
+    // SequenceSlot → VM
     public static SequenceSlotViewModel FromModel(SequenceSlot slot) => slot switch
     {
         LoopBeginSlot lb => new() { SelectedPreset = SlotPreset.All.OfType<LoopBeginPreset>().First(), RepeatCount = lb.RepeatCount },
@@ -88,6 +91,8 @@ public sealed partial class SequenceSlotViewModel
         _ => throw new ArgumentOutOfRangeException(nameof(slot)),
     };
 
+    // OSC系VMの組み立てヘルパー
+    // アドレスが既知のプリセットに一致すればBuiltinPreset、それ以外はCustomPreset として復元する
     private static SequenceSlotViewModel BuildOscVm(
         string address, OscValueType vt,
         float floatVal = 0f, int intVal = 0, bool boolVal = false,

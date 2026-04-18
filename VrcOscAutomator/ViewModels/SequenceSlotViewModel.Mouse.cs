@@ -7,6 +7,8 @@ namespace VrcOscAutomator.ViewModels;
 
 public sealed partial class SequenceSlotViewModel
 {
+    // ── マウスボタン ──────────────────────────────────────────────────────
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
     [NotifyPropertyChangedFor(nameof(IsMouseButtonLeft))]
@@ -21,6 +23,8 @@ public sealed partial class SequenceSlotViewModel
     [NotifyPropertyChangedFor(nameof(IsMouseButtonActionPressAndRelease))]
     public partial KeyAction SelectedMouseButtonAction { get; set; } = KeyAction.Press;
 
+    // RadioButtonバインディング用:
+    // SelectedMouseButtonAction => bool
     public bool IsMouseButtonActionPress
     {
         get => SelectedMouseButtonAction == KeyAction.Press;
@@ -39,14 +43,22 @@ public sealed partial class SequenceSlotViewModel
         set { if (value) SelectedMouseButtonAction = KeyAction.PressAndRelease; }
     }
 
+    // RadioButtonバインディング用
+    // SelectedMouseButton => boolに変換
     public bool IsMouseButtonLeft { get => SelectedMouseButton == MouseButton.Left; set { if (value) SelectedMouseButton = MouseButton.Left; } }
     public bool IsMouseButtonRight { get => SelectedMouseButton == MouseButton.Right; set { if (value) SelectedMouseButton = MouseButton.Right; } }
     public bool IsMouseButtonMiddle { get => SelectedMouseButton == MouseButton.Middle; set { if (value) SelectedMouseButton = MouseButton.Middle; } }
 
+    // ── マウスホイール ────────────────────────────────────────────────────
+
+    // スクロール量（正=上、負=下）
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
     public partial int WheelClicks { get; set; } = 1;
 
+    // ── マウス移動 ────────────────────────────────────────────────────────
+
+    // 移動量または移動先座標
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
     public partial int MouseMoveX { get; set; }
@@ -55,12 +67,15 @@ public sealed partial class SequenceSlotViewModel
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
     public partial int MouseMoveY { get; set; }
 
+    // 相対移動か絶対移動か
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
     [NotifyPropertyChangedFor(nameof(IsMouseMoveRelative))]
     [NotifyPropertyChangedFor(nameof(IsMouseMoveAbsolute))]
     public partial MouseMoveMode SelectedMouseMoveMode { get; set; } = MouseMoveMode.Relative;
 
+    // RadioButtonバインディング用
+    // SelectedMouseMoveMode => bool
     public bool IsMouseMoveRelative
     {
         get => SelectedMouseMoveMode == MouseMoveMode.Relative;

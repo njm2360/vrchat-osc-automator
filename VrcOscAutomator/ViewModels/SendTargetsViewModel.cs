@@ -7,15 +7,21 @@ namespace VrcOscAutomator.ViewModels;
 
 public sealed partial class SendTargetsViewModel : ObservableObject
 {
+    // DataGridにバインドする送信先一覧
     public ObservableCollection<OscTargetViewModel> Targets { get; } = [];
 
+    // DataGridで選択中の行
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RemoveTargetCommand))]
     public partial OscTargetViewModel? SelectedTarget { get; set; }
 
+    // ── コマンド ──────────────────────────────────────────────────────────
+
+    // 追加ボタン: 新規行を末尾に挿入
     [RelayCommand]
     private void AddTarget() => Targets.Add(new OscTargetViewModel());
 
+    // 削除ボタン: 選択行を削除（未選択時は無効）
     [RelayCommand(CanExecute = nameof(HasSelectedTarget))]
     private void RemoveTarget()
     {
@@ -24,6 +30,8 @@ public sealed partial class SendTargetsViewModel : ObservableObject
     }
 
     private bool HasSelectedTarget => SelectedTarget is not null;
+
+    // ── モデル変換 ────────────────────────────────────────────────────────
 
     public void LoadFromModels(IEnumerable<OscTarget> targets)
     {
@@ -34,6 +42,9 @@ public sealed partial class SendTargetsViewModel : ObservableObject
 
     public List<OscTarget> ToModels() => [.. Targets.Select(t => t.ToModel())];
 
+    // ── バリデーション ────────────────────────────────────────────────────
+
+    // IP:Portが重複する行がある場合はエラー
     public string? GetDuplicateError()
     {
         var duplicates = Targets

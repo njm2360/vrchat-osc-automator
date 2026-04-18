@@ -5,6 +5,9 @@ namespace VrcOscAutomator.ViewModels;
 
 public sealed partial class SequenceSlotViewModel
 {
+    // ── キー送信（単押し） ────────────────────────────────────────────────
+
+    // 操作するキー
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
     public partial VirtualKeyItem SelectedKey { get; set; } = VirtualKeyItem.All[0];
@@ -16,6 +19,7 @@ public sealed partial class SequenceSlotViewModel
     [NotifyPropertyChangedFor(nameof(IsKeyActionPressAndRelease))]
     public partial KeyAction SelectedKeyAction { get; set; } = KeyAction.Press;
 
+    // RadioButtonバインディング用: SelectedKeyAction => bool
     public bool IsKeyActionPress
     {
         get => SelectedKeyAction == KeyAction.Press;
@@ -33,6 +37,8 @@ public sealed partial class SequenceSlotViewModel
         get => SelectedKeyAction == KeyAction.PressAndRelease;
         set { if (value) SelectedKeyAction = KeyAction.PressAndRelease; }
     }
+
+    // ── 文字入力 ──────────────────────────────────────────────────────────
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
