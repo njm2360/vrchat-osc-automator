@@ -229,11 +229,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     // ── アプリケーションライフサイクル ────────────────────────────────────
 
-    // Window.Loaded: 設定ファイルを読み込みプロファイルと各種設定を復元
+    // Window.Loaded: 設定を読み込みプロファイルと各種設定を復元
     [RelayCommand]
     private async Task LoadedAsync()
     {
-        AppSettings settings = await _repository.LoadAsync();
+        SettingsLoadResult loadResult = await _repository.LoadAsync();
+        if (loadResult.WasCorrupted)
+            _dialogService.ShowError(loadResult.CorruptionDetail!);
+        AppSettings settings = loadResult.Settings;
         _targets = settings.Targets;
         _oscSender.SetTargets(_targets);
         _hotkeys = settings.Hotkeys;

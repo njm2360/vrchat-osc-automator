@@ -4,6 +4,6 @@ namespace VrcOscAutomator.Interfaces;
 
 public interface ISettingsRepository
 {
-    Task<AppSettings> LoadAsync();
+    Task<SettingsLoadResult> LoadAsync();
     Task SaveAsync(AppSettings settings);
 }
