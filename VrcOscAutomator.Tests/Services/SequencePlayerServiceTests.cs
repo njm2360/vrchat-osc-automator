@@ -29,7 +29,7 @@ public class SequencePlayerServiceTests : IDisposable
         // [LoopBegin×3] [Jump=1] [LoopEnd]  → Jump を 3 回送信
         var slots = Slots(
             new LoopBeginSlot(3),
-            new IntSlot("/input/Jump", 1, 5, false),
+            new IntSlot("/input/Jump", 1, 5, false, TransitionMode.None),
             new LoopEndSlot()
         );
 
@@ -46,7 +46,7 @@ public class SequencePlayerServiceTests : IDisposable
         var slots = Slots(
             new LoopBeginSlot(2),
             new LoopBeginSlot(3),
-            new IntSlot("/input/Jump", 1, 5, false),
+            new IntSlot("/input/Jump", 1, 5, false, TransitionMode.None),
             new LoopEndSlot(),
             new LoopEndSlot()
         );
@@ -63,7 +63,7 @@ public class SequencePlayerServiceTests : IDisposable
         using var cts = new CancellationTokenSource();
         var slots = Slots(
             new LoopBeginSlot(0),
-            new IntSlot("/input/Jump", 1, 5, false),
+            new IntSlot("/input/Jump", 1, 5, false, TransitionMode.None),
             new LoopEndSlot()
         );
 
@@ -80,7 +80,7 @@ public class SequencePlayerServiceTests : IDisposable
     {
         // loop=true の場合、全スロット完了後に先頭に戻って繰り返す
         using var cts = new CancellationTokenSource();
-        var slots = Slots(new IntSlot("/input/Jump", 1, 5, false));
+        var slots = Slots(new IntSlot("/input/Jump", 1, 5, false, TransitionMode.None));
 
         Task play = _sut.PlayAsync(slots, loop: true, null, cts.Token);
         await Task.Delay(100);
@@ -96,8 +96,8 @@ public class SequencePlayerServiceTests : IDisposable
     public async Task PlayAsync_ReportsSlotIndexThenMinusOne()
     {
         var slots = Slots(
-            new IntSlot("/input/Jump", 1, 5, false),
-            new IntSlot("/input/Voice", 1, 5, false)
+            new IntSlot("/input/Jump", 1, 5, false, TransitionMode.None),
+            new IntSlot("/input/Voice", 1, 5, false, TransitionMode.None)
         );
         var reported = new List<int>();
         var progress = new Progress<SequenceProgress>(p => reported.Add(p.SlotIndex));
@@ -117,7 +117,7 @@ public class SequencePlayerServiceTests : IDisposable
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        var slots = Slots(new IntSlot("/input/Jump", 1, 1000, false));
+        var slots = Slots(new IntSlot("/input/Jump", 1, 1000, false, TransitionMode.None));
 
         await _sut.PlayAsync(slots, loop: false, null, cts.Token);
 
@@ -127,7 +127,7 @@ public class SequencePlayerServiceTests : IDisposable
     [Fact]
     public async Task StopAsync_DuringPlay_StopsPlayback()
     {
-        var slots = Slots(new FloatSlot("/input/Vertical", 1f, 5000, false));
+        var slots = Slots(new FloatSlot("/input/Vertical", 1f, 5000, false, TransitionMode.None));
 
         Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
         await Task.Delay(30); // PlayAsync が開始するのを待つ
@@ -141,7 +141,7 @@ public class SequencePlayerServiceTests : IDisposable
     public async Task StopAsync_ResetOnComplete_False_StillSendsReset()
     {
         // 停止時は ResetOnComplete の設定にかかわらずリセットする（暴走防止）
-        var slots = Slots(new FloatSlot("/input/Vertical", 1f, 5000, false));
+        var slots = Slots(new FloatSlot("/input/Vertical", 1f, 5000, false, TransitionMode.None));
 
         Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
         await Task.Delay(30);
@@ -154,7 +154,7 @@ public class SequencePlayerServiceTests : IDisposable
     [Fact]
     public async Task StopAsync_ResetOnComplete_True_SendsReset()
     {
-        var slots = Slots(new FloatSlot("/input/Vertical", 1f, 5000, true));
+        var slots = Slots(new FloatSlot("/input/Vertical", 1f, 5000, true, TransitionMode.None));
 
         Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
         await Task.Delay(30);
@@ -169,7 +169,7 @@ public class SequencePlayerServiceTests : IDisposable
     [Fact]
     public async Task PauseAsync_ThenResumeAsync_CompletesPlayback()
     {
-        var slots = Slots(new IntSlot("/input/Jump", 1, 50, false));
+        var slots = Slots(new IntSlot("/input/Jump", 1, 50, false, TransitionMode.None));
 
         Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
         await Task.Delay(10);
@@ -186,7 +186,7 @@ public class SequencePlayerServiceTests : IDisposable
     [Fact]
     public async Task PauseAsync_ResetOnComplete_True_SendsReset()
     {
-        var slots = Slots(new IntSlot("/input/Jump", 1, 5000, true));
+        var slots = Slots(new IntSlot("/input/Jump", 1, 5000, true, TransitionMode.None));
 
         Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
         await Task.Delay(30);
@@ -201,7 +201,7 @@ public class SequencePlayerServiceTests : IDisposable
     public async Task PauseAsync_ResetOnComplete_False_ResetsOnPause()
     {
         // ResetOnComplete にかかわらず一時停止時にリセットする（暴走防止）
-        var slots = Slots(new IntSlot("/input/Jump", 1, 5000, false));
+        var slots = Slots(new IntSlot("/input/Jump", 1, 5000, false, TransitionMode.None));
 
         Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
         await Task.Delay(30);
@@ -221,7 +221,7 @@ public class SequencePlayerServiceTests : IDisposable
     [Fact]
     public async Task ResumeAsync_ResendsSendCommand()
     {
-        var slots = Slots(new IntSlot("/input/Jump", 1, 5000, false));
+        var slots = Slots(new IntSlot("/input/Jump", 1, 5000, false, TransitionMode.None));
 
         Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
         await Task.Delay(30);
@@ -240,8 +240,8 @@ public class SequencePlayerServiceTests : IDisposable
     {
         // Pause → Resume 後、次のスロットに進まず同じスロットに留まること
         var slots = Slots(
-            new IntSlot("/slot/first", 1, 400, false),
-            new IntSlot("/slot/second", 1, 10, false)
+            new IntSlot("/slot/first", 1, 400, false, TransitionMode.None),
+            new IntSlot("/slot/second", 1, 10, false, TransitionMode.None)
         );
 
         Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
@@ -263,7 +263,7 @@ public class SequencePlayerServiceTests : IDisposable
     public async Task StopAsync_WhilePaused_ClearsBothFlags()
     {
         // 一時停止中に停止したとき IsPaused/IsPlaying が両方 false になること
-        var slots = Slots(new IntSlot("/input/Jump", 1, 5000, false));
+        var slots = Slots(new IntSlot("/input/Jump", 1, 5000, false, TransitionMode.None));
 
         Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
         await Task.Delay(30);
@@ -279,7 +279,7 @@ public class SequencePlayerServiceTests : IDisposable
     public async Task PauseAsync_ResetOnComplete_True_SendsResetAtPauseTime()
     {
         // リセットは Stop 時ではなく Pause 時点で送られること
-        var slots = Slots(new IntSlot("/input/Jump", 1, 5000, true));
+        var slots = Slots(new IntSlot("/input/Jump", 1, 5000, true, TransitionMode.None));
 
         Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
         await Task.Delay(30);
@@ -303,7 +303,7 @@ public class SequencePlayerServiceTests : IDisposable
         // Duration=400ms のスロット、約30ms 実行後に Pause → 残り約370ms のはず
         // Pause 中に 500ms 待機（Duration を超える時間）してから Resume しても、
         // Resume 後に自然完了するまでの追加時間は ~400ms ではなく ~370ms 以内であること
-        var slots = Slots(new IntSlot("/input/Jump", 1, 400, false));
+        var slots = Slots(new IntSlot("/input/Jump", 1, 400, false, TransitionMode.None));
 
         Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
         await Task.Delay(30);   // ~30ms 実行
@@ -342,7 +342,7 @@ public class SequencePlayerServiceTests : IDisposable
         // [Breakpoint] [Jump=1] → Resume 後に Jump が実行されること
         var slots = Slots(
             new BreakpointSlot(),
-            new IntSlot("/input/Jump", 1, 5, false)
+            new IntSlot("/input/Jump", 1, 5, false, TransitionMode.None)
         );
 
         Task play = _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
@@ -369,7 +369,7 @@ public class SequencePlayerServiceTests : IDisposable
     [Fact]
     public async Task IsPlaying_AfterPlayCompletes_IsFalse()
     {
-        var slots = Slots(new IntSlot("/input/Jump", 1, 10, false));
+        var slots = Slots(new IntSlot("/input/Jump", 1, 10, false, TransitionMode.None));
 
         await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
 

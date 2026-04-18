@@ -19,6 +19,19 @@ public sealed class SequenceImportExportService : ISequenceImportExportService
     public ProfileExportData? Import(string input)
     {
         var data = JsonSerializer.Deserialize<ProfileExportData>(input, Options);
+        if (data is not null)
+            ValidateSlots(data.Slots);
         return data?.Slots is { Count: > 0 } ? data : null;
+    }
+
+    private static void ValidateSlots(IEnumerable<SequenceSlot> slots)
+    {
+        foreach (var slot in slots)
+        {
+            if (slot is FloatSlot { TransitionMode: not TransitionMode.None } f && (f.TransitionFromValue is null || f.TransitionToValue is null)
+             || slot is IntSlot { TransitionMode: not TransitionMode.None } n && (n.TransitionFromValue is null || n.TransitionToValue is null))
+                throw new JsonException(
+                    "transitionFromValue and transitionToValue are required when transitionMode is not None.");
+        }
     }
 }

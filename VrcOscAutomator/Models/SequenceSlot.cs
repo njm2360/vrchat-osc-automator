@@ -24,9 +24,9 @@ public abstract record SequenceSlot
 
 /// <summary>OSC を送信する基底スロット。</summary>
 public abstract record OscSlot(
-    string Address,
-    int DurationMs,
-    bool ResetOnComplete) : SequenceSlot
+    [property: JsonRequired] string Address,
+    [property: JsonRequired] int DurationMs,
+    [property: JsonRequired] bool ResetOnComplete) : SequenceSlot
 {
     public override int GetDurationMs() => DurationMs;
 }
@@ -34,20 +34,20 @@ public abstract record OscSlot(
 /// <summary>Float 値を送信するスロット</summary>
 public record FloatSlot(
     string Address,
-    float Value,
-    int DurationMs = 500,
-    bool ResetOnComplete = true,
-    TransitionMode TransitionMode = TransitionMode.None,
+    [property: JsonRequired] float Value,
+    int DurationMs,
+    bool ResetOnComplete,
+    TransitionMode TransitionMode,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] float? TransitionFromValue = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] float? TransitionToValue = null) : OscSlot(Address, DurationMs, ResetOnComplete);
 
 /// <summary>Int 値を送信するスロット</summary>
 public record IntSlot(
     string Address,
-    int Value,
-    int DurationMs = 500,
-    bool ResetOnComplete = true,
-    TransitionMode TransitionMode = TransitionMode.None,
+    [property: JsonRequired] int Value,
+    int DurationMs,
+    bool ResetOnComplete,
+    TransitionMode TransitionMode,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? TransitionFromValue = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? TransitionToValue = null) : OscSlot(Address, DurationMs, ResetOnComplete);
 
@@ -56,31 +56,33 @@ public enum TransitionMode { None, Linear, EaseIn, EaseOut, EaseInOut }
 /// <summary>Bool 値を送信するスロット。</summary>
 public record BoolSlot(
     string Address,
-    bool Value,
-    int DurationMs = 500,
-    bool ResetOnComplete = true) : OscSlot(Address, DurationMs, ResetOnComplete);
+    [property: JsonRequired] bool Value,
+    int DurationMs,
+    bool ResetOnComplete) : OscSlot(Address, DurationMs, ResetOnComplete);
 
 /// <summary>String 値を送信するスロット。</summary>
 public record StringSlot(
     string Address,
-    string Value,
-    int DurationMs = 500,
-    bool ResetOnComplete = true) : OscSlot(Address, DurationMs, ResetOnComplete);
+    [property: JsonRequired] string Value,
+    int DurationMs,
+    bool ResetOnComplete) : OscSlot(Address, DurationMs, ResetOnComplete);
 
 /// <summary>OSC を送信せず待機するスロット。</summary>
-public record WaitSlot(int DurationMs = 500) : SequenceSlot
+public record WaitSlot([property: JsonRequired] int DurationMs) : SequenceSlot
 {
     public override int GetDurationMs() => DurationMs;
 }
 
 /// <summary>MinMs〜MaxMs のランダム時間待機するスロット。</summary>
-public record RandomWaitSlot(int MinMs = 300, int MaxMs = 1000) : SequenceSlot
+public record RandomWaitSlot(
+    [property: JsonRequired] int MinMs,
+    [property: JsonRequired] int MaxMs) : SequenceSlot
 {
     public override int GetDurationMs() => Random.Shared.Next(MinMs, MaxMs + 1);
 }
 
 /// <summary>繰り返しブロックの開始マーカー。</summary>
-public record LoopBeginSlot(int RepeatCount = 2) : SequenceSlot;
+public record LoopBeginSlot([property: JsonRequired] int RepeatCount) : SequenceSlot;
 
 /// <summary>繰り返しブロックの終了マーカー。</summary>
 public record LoopEndSlot() : SequenceSlot;
@@ -89,13 +91,19 @@ public record LoopEndSlot() : SequenceSlot;
 public record BreakpointSlot() : SequenceSlot;
 
 /// <summary>単一キーを PRESS または RELEASE するスロット。</summary>
-public record KeySingleSlot(int VirtualKey, KeyAction Action, int DurationMs = 0) : SequenceSlot
+public record KeySingleSlot(
+    [property: JsonRequired] int VirtualKey,
+    [property: JsonRequired] KeyAction Action,
+    int DurationMs = 0) : SequenceSlot
 {
     public override int GetDurationMs() => DurationMs;
 }
 
 /// <summary>文字列をキーボード入力として送信するスロット。</summary>
-public record KeyTypeStringSlot(string Text, bool AppendNewline = false, int DurationMs = 0) : SequenceSlot
+public record KeyTypeStringSlot(
+    [property: JsonRequired] string Text,
+    bool AppendNewline = false,
+    int DurationMs = 0) : SequenceSlot
 {
     public override int GetDurationMs() => DurationMs;
 }
@@ -103,19 +111,28 @@ public record KeyTypeStringSlot(string Text, bool AppendNewline = false, int Dur
 public enum KeyAction { Press, Release, PressAndRelease }
 
 /// <summary>マウスボタンを PRESS または RELEASE するスロット。</summary>
-public record MouseButtonSlot(MouseButton Button, KeyAction Action, int DurationMs = 0) : SequenceSlot
+public record MouseButtonSlot(
+    [property: JsonRequired] MouseButton Button,
+    [property: JsonRequired] KeyAction Action,
+    int DurationMs = 0) : SequenceSlot
 {
     public override int GetDurationMs() => DurationMs;
 }
 
 /// <summary>マウスホイールをスクロールするスロット。正値=上、負値=下。</summary>
-public record MouseWheelSlot(int Clicks, int DurationMs = 0) : SequenceSlot
+public record MouseWheelSlot(
+    [property: JsonRequired] int Clicks,
+    int DurationMs = 0) : SequenceSlot
 {
     public override int GetDurationMs() => DurationMs;
 }
 
 /// <summary>マウスカーソルを移動するスロット。</summary>
-public record MouseMoveSlot(int X, int Y, MouseMoveMode Mode, int DurationMs = 0) : SequenceSlot
+public record MouseMoveSlot(
+    [property: JsonRequired] int X,
+    [property: JsonRequired] int Y,
+    [property: JsonRequired] MouseMoveMode Mode,
+    int DurationMs = 0) : SequenceSlot
 {
     public override int GetDurationMs() => DurationMs;
 }

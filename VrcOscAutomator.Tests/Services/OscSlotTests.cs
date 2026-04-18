@@ -26,7 +26,7 @@ public class OscSlotTests : IDisposable
     [Fact]
     public async Task PlayAsync_FloatSlot_SendsFloat()
     {
-        var slots = Slots(new FloatSlot("/input/Vertical", 0.5f, 10, false));
+        var slots = Slots(new FloatSlot("/input/Vertical", 0.5f, 10, false, TransitionMode.None));
 
         await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
 
@@ -36,7 +36,7 @@ public class OscSlotTests : IDisposable
     [Fact]
     public async Task PlayAsync_IntSlot_SendsInt()
     {
-        var slots = Slots(new IntSlot("/input/Jump", 1, 10, false));
+        var slots = Slots(new IntSlot("/input/Jump", 1, 10, false, TransitionMode.None));
 
         await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
 
@@ -92,7 +92,7 @@ public class OscSlotTests : IDisposable
     [Fact]
     public async Task ResetOnComplete_Float_SendsZero()
     {
-        var slots = Slots(new FloatSlot("/param/float", 0.8f, 10, true));
+        var slots = Slots(new FloatSlot("/param/float", 0.8f, 10, true, TransitionMode.None));
 
         await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
 
@@ -102,7 +102,7 @@ public class OscSlotTests : IDisposable
     [Fact]
     public async Task ResetOnComplete_Int_SendsZero()
     {
-        var slots = Slots(new IntSlot("/param/int", 1, 10, true));
+        var slots = Slots(new IntSlot("/param/int", 1, 10, true, TransitionMode.None));
 
         await _sut.PlayAsync(slots, loop: false, null, CancellationToken.None);
 
@@ -133,8 +133,8 @@ public class OscSlotTests : IDisposable
     public async Task ResetOnComplete_False_NeverSendsReset()
     {
         var slots = Slots(
-            new FloatSlot("/param/float", 0.8f, 10, false),
-            new IntSlot("/param/int", 1, 10, false),
+            new FloatSlot("/param/float", 0.8f, 10, false, TransitionMode.None),
+            new IntSlot("/param/int", 1, 10, false, TransitionMode.None),
             new BoolSlot("/param/bool", true, 10, false),
             new StringSlot("/param/str", "hi", 10, false)
         );

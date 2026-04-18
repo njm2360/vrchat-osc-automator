@@ -86,10 +86,10 @@ public sealed class JsonSettingsRepository : ISettingsRepository
              ? new WaitSlot(s.DurationMs)
              : s.ValueType switch
              {
-                 1 => new IntSlot(s.Address, (int)s.Value, s.DurationMs, s.ResetOnComplete),
+                 1 => new IntSlot(s.Address, (int)s.Value, s.DurationMs, s.ResetOnComplete, TransitionMode.None),
                  2 => new BoolSlot(s.Address, s.Value != 0f, s.DurationMs, s.ResetOnComplete),
                  3 => new StringSlot(s.Address, s.StringValue, s.DurationMs, s.ResetOnComplete),
-                 _ => new FloatSlot(s.Address, s.Value, s.DurationMs, s.ResetOnComplete),
+                 _ => new FloatSlot(s.Address, s.Value, s.DurationMs, s.ResetOnComplete, TransitionMode.None),
              },
     };
 
