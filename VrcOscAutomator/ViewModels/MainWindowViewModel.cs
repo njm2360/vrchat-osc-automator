@@ -95,13 +95,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     // ── Start CanExecute / ステータス表示 ────────────────────────────────
 
-    // 送信先が有効・スロットが存在・全スロットが有効の場合のみ再生可能
+    // 送信先が有効・スロットが存在・全スロットが有効・ループが対応している場合のみ再生可能
     private bool CanStart => IsNotPlaying
         && Profiles.Count > 0
         && SelectedProfileIndex >= 0 && SelectedProfileIndex < Profiles.Count
         && _targets.Any(t => t.IsEnabled)
         && Profiles[SelectedProfileIndex].Slots.Count > 0
-        && Profiles[SelectedProfileIndex].AllSlotsValid;
+        && Profiles[SelectedProfileIndex].AllSlotsValid
+        && Profiles[SelectedProfileIndex].LoopSlotsBalanced;
 
     // 実行できない理由をユーザーに表示するメッセージ
     public string StatusMessage
@@ -116,6 +117,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 return "スロットが追加されていません。";
             if (!Profiles[SelectedProfileIndex].AllSlotsValid)
                 return "無効な設定のスロットがあります。内容を確認してください。";
+            if (!Profiles[SelectedProfileIndex].LoopSlotsBalanced)
+                return "繰り返し開始と繰り返し終了のスロット数が一致していません。";
             return string.Empty;
         }
     }
@@ -161,7 +164,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         };
         profile.PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName == nameof(ProfileViewModel.AllSlotsValid))
+            if (e.PropertyName is nameof(ProfileViewModel.AllSlotsValid) or nameof(ProfileViewModel.LoopSlotsBalanced))
             {
                 StartCommand.NotifyCanExecuteChanged();
                 OnPropertyChanged(nameof(StatusMessage));

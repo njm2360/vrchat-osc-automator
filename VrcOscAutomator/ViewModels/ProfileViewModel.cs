@@ -70,6 +70,10 @@ public sealed partial class ProfileViewModel : ObservableObject
     // 全スロットのアドレスが有効であれば true
     public bool AllSlotsValid => Slots.All(s => s.IsValid);
 
+    // LoopBegin と LoopEnd のスロット数が一致していれば true
+    public bool LoopSlotsBalanced =>
+        Slots.Count(s => s.SelectedPreset.IsLoopBegin) == Slots.Count(s => s.SelectedPreset.IsLoopEnd);
+
     // スロットの追加・削除時にAllSlotsValidを再通知し、各スロットの変更監視を付け外し
     private void OnSlotsCollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
     {
@@ -82,6 +86,7 @@ public sealed partial class ProfileViewModel : ObservableObject
                 slot.PropertyChanged -= OnSlotPropertyChanged;
 
         OnPropertyChanged(nameof(AllSlotsValid));
+        OnPropertyChanged(nameof(LoopSlotsBalanced));
         ExportCommand.NotifyCanExecuteChanged();
     }
 
@@ -90,6 +95,8 @@ public sealed partial class ProfileViewModel : ObservableObject
     {
         if (e.PropertyName == nameof(SequenceSlotViewModel.IsValid))
             OnPropertyChanged(nameof(AllSlotsValid));
+        if (e.PropertyName == nameof(SequenceSlotViewModel.SelectedPreset))
+            OnPropertyChanged(nameof(LoopSlotsBalanced));
     }
 
     // ── スロット操作コマンド ──────────────────────────────────────────────
