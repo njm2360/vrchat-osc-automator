@@ -186,20 +186,13 @@ public sealed partial class ProfileViewModel : ObservableObject
         string? input = _dialogService.ShowImportDialog();
         if (input is null or { Length: 0 }) return;
 
-        ProfileExportData? data;
-        try
-        {
-            data = _importExport.Import(input);
-        }
-        catch (Exception ex) when (ex is JsonException)
+        ProfileExportData? data = null;
+        try { data = _importExport.Import(input); }
+        catch (JsonException) { }
+
+        if (data is null)
         {
             _dialogService.ShowError("インポートデータの形式が正しくありません。");
-            return;
-        }
-
-        if (data is null or { Slots.Count: 0 })
-        {
-            _dialogService.ShowError("スロットが含まれていないデータです。");
             return;
         }
 

@@ -174,12 +174,13 @@ public class SequenceImportExportServiceTests
     }
 
     [Fact]
-    public void Import_EmptySlots_ReturnsNull()
+    public void Import_EmptySlots_ReturnsData()
     {
         string json = _sut.Export("Empty", [], false);
         ProfileExportData? result = _sut.Import(json);
 
-        result.Should().BeNull();
+        result.Should().NotBeNull();
+        result!.Slots.Should().BeEmpty();
     }
 
     [Fact]
