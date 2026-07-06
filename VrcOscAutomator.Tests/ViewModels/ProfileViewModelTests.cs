@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Moq;
+using VrcOscAutomator.Exceptions;
 using VrcOscAutomator.Interfaces;
 using VrcOscAutomator.Models;
 using VrcOscAutomator.ViewModels;
@@ -656,6 +657,17 @@ public class ProfileViewModelTests
         _sut.ImportCommand.Execute(null);
 
         _dialog.Verify(d => d.ShowError(It.IsAny<string>()), Times.Once);
+    }
+
+    [Fact]
+    public void Import_UnsupportedSchemaVersion_ShowsUpdatePrompt()
+    {
+        _dialog.Setup(d => d.ShowImportDialog()).Returns("data");
+        _importExport.Setup(s => s.Import("data")).Throws(new UnsupportedSchemaVersionException(3));
+
+        _sut.ImportCommand.Execute(null);
+
+        _dialog.Verify(d => d.ShowError("このデータはより新しいバージョンで作成されています。アプリを更新してください。"), Times.Once);
     }
 
     [Fact]

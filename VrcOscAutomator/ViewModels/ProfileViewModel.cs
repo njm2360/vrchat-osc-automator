@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using VrcOscAutomator.Exceptions;
 using VrcOscAutomator.Interfaces;
 using VrcOscAutomator.Models;
 
@@ -188,11 +189,16 @@ public sealed partial class ProfileViewModel : ObservableObject
 
         ProfileExportData? data = null;
         try { data = _importExport.Import(input); }
+        catch (UnsupportedSchemaVersionException)
+        {
+            _dialogService.ShowError("このデータはより新しいバージョンで作成されています。アプリを更新してください。");
+            return;
+        }
         catch (JsonException) { }
 
         if (data is null)
         {
-            _dialogService.ShowError("インポートデータの形式が正しくありません。");
+            _dialogService.ShowError("インポートデータの形式が正しくありません。データが破損しているか、異なるバージョンのアプリで作成された可能性があります。");
             return;
         }
 
