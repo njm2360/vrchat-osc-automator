@@ -196,8 +196,15 @@ class InputSettings {
 ### 3.7 ProfileExportData（インポート/エクスポート用）
 
 ```csharp
-record ProfileExportData(string Name, List<SequenceSlot> Slots, bool IsLoopMode);
+record ProfileExportData(
+    string Name,
+    List<SequenceSlot> Slots,
+    bool IsLoopMode,
+    int? SchemaVersion = null,
+    string? AppVersion = null);
 ```
+
+`SchemaVersion` / `AppVersion` はv1.3.1で追加されたフィールドで、`JsonRequired` は付与しない（旧バージョンが書き出したファイルには存在しないため）。エクスポート時は常に現在のスキーマバージョン（`SequenceImportExportService.CurrentSchemaVersion`）とアプリバージョンを設定する。インポート時にファイルの `schemaVersion` が現在のスキーマバージョンより大きい場合、`UnsupportedSchemaVersionException` をスローする。
 
 ---
 
