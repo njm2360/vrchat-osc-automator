@@ -11,6 +11,7 @@ public sealed class SequenceImportExportService : ISequenceImportExportService
         WriteIndented = true,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() },
     };
 
     public string Export(string name, IEnumerable<SequenceSlot> slots, bool isLoopMode)
@@ -21,7 +22,7 @@ public sealed class SequenceImportExportService : ISequenceImportExportService
         var data = JsonSerializer.Deserialize<ProfileExportData>(input, Options);
         if (data is not null)
             ValidateSlots(data.Slots);
-        return data?.Slots is { Count: > 0 } ? data : null;
+        return data;
     }
 
     private static void ValidateSlots(IEnumerable<SequenceSlot> slots)

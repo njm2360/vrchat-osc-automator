@@ -30,7 +30,8 @@
         </Grid.ColumnDefinitions>
 
         <!-- ========== シーケンス DataGrid ========== -->
-        <DataGrid Grid.Column="0"
+        <DataGrid x:Name="SlotsDataGrid"
+                  Grid.Column="0"
                   ItemsSource="{Binding Slots}"
                   SelectedItem="{Binding SelectedSlot}"
                   AutoGenerateColumns="False"
@@ -39,7 +40,8 @@
                   CanUserSortColumns="False"
                   SelectionUnit="FullRow"
                   HeadersVisibility="Column"
-                  RowDetailsVisibilityMode="VisibleWhenSelected"
+                  IsReadOnly="{Binding DataContext.IsPlaying, RelativeSource={RelativeSource AncestorType=Window}}"
+                  SelectionChanged="SlotsDataGrid_SelectionChanged"
                   Margin="4">
 
             <!-- ========== アコーディオン展開パネル ========== -->
@@ -48,7 +50,8 @@
                     <Border Background="#F0F4FA"
                             BorderBrush="#7B9FD4" BorderThickness="3,0,0,0"
                             Padding="20,10,12,12"
-                            Margin="24,0,0,0">
+                            Margin="24,0,0,0"
+                            IsEnabled="{Binding DataContext.IsNotPlaying, RelativeSource={RelativeSource AncestorType=Window}}">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
 
                         <StackPanel>
@@ -419,7 +422,8 @@
                             <ComboBox ItemsSource="{Binding AvailablePresets}"
                                       SelectedItem="{Binding SelectedPreset, UpdateSourceTrigger=PropertyChanged}"
                                       IsSynchronizedWithCurrentItem="False"
-                                      DisplayMemberPath="Name">
+                                      DisplayMemberPath="Name"
+                                      IsEnabled="{Binding DataContext.IsNotPlaying, RelativeSource={RelativeSource AncestorType=Window}}">
                                 <ComboBox.GroupStyle>
                                     <GroupStyle>
                                         <GroupStyle.HeaderTemplate>
@@ -489,7 +493,8 @@
         <StackPanel Grid.Column="1"
                     Orientation="Vertical"
                     VerticalAlignment="Top"
-                    Margin="4">
+                    Margin="4"
+                    IsEnabled="{Binding DataContext.IsNotPlaying, RelativeSource={RelativeSource AncestorType=Window}}">
             <Button Content="追加"
                     Command="{Binding AddSlotCommand}"
                     Margin="0,2" />

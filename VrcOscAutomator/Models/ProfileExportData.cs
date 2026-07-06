@@ -1,3 +1,8 @@
+using System.Text.Json.Serialization;
+
 namespace VrcOscAutomator.Models;
 
-public record ProfileExportData(string Name, List<SequenceSlot> Slots, bool IsLoopMode);
+public record ProfileExportData(
+    [property: JsonRequired] string Name,
+    [property: JsonRequired] List<SequenceSlot> Slots,
+    [property: JsonRequired] bool IsLoopMode);
