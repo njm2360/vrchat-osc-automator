@@ -1,5 +1,6 @@
 using System.Text.Json;
 using FluentAssertions;
+using VrcOscAutomator.Exceptions;
 using VrcOscAutomator.Models;
 using VrcOscAutomator.Services;
 using Xunit;
@@ -199,5 +200,92 @@ public class SequenceImportExportServiceTests
 
         result.Should().NotBeNull();
         result!.Slots.Should().BeEquivalentTo(slots, o => o.RespectingRuntimeTypes());
+    }
+
+    // ─── スキーマバージョン ────────────────────────────────────────────────
+
+    [Fact]
+    public void Export_IncludesSchemaVersionAndAppVersion()
+    {
+        var slots = new SequenceSlot[] { new WaitSlot(100) };
+
+        string json = _sut.Export("Test", slots, false);
+
+        using var doc = JsonDocument.Parse(json);
+        doc.RootElement.GetProperty("schemaVersion").GetInt32().Should().Be(SequenceImportExportService.CurrentSchemaVersion);
+        doc.RootElement.GetProperty("appVersion").GetString().Should().NotBeNullOrEmpty();
+    }
+
+    [Fact]
+    public void Import_LegacyFormat_NoSchemaVersion_IntEnum_Imports()
+    {
+        // v1.2.0形式: schemaVersion フィールド無し + enum を整数で表現
+        const string json = """{"name":"Legacy","isLoopMode":false,"slots":[{"type":"int","address":"/x","value":1,"durationMs":50,"resetOnComplete":false,"transitionMode":0}]}""";
+
+        ProfileExportData? result = _sut.Import(json);
+
+        result.Should().NotBeNull();
+        result!.Name.Should().Be("Legacy");
+        result.Slots.Should().ContainSingle();
+    }
+
+    [Fact]
+    public void Import_LegacyFormat_NoSchemaVersion_StringEnum_Imports()
+    {
+        // v1.3.0形式: schemaVersion フィールド無し + enum を文字列で表現
+        const string json = """{"name":"Legacy","isLoopMode":false,"slots":[{"type":"int","address":"/x","value":1,"durationMs":50,"resetOnComplete":false,"transitionMode":"None"}]}""";
+
+        ProfileExportData? result = _sut.Import(json);
+
+        result.Should().NotBeNull();
+        result!.Name.Should().Be("Legacy");
+        result.Slots.Should().ContainSingle();
+    }
+
+    [Fact]
+    public void Import_WithCurrentSchemaVersion_Imports()
+    {
+        const string json = """{"schemaVersion":2,"appVersion":"1.3.1","name":"Current","isLoopMode":false,"slots":[{"type":"int","address":"/x","value":1,"durationMs":50,"resetOnComplete":false,"transitionMode":"None"}]}""";
+
+        ProfileExportData? result = _sut.Import(json);
+
+        result.Should().NotBeNull();
+        result!.Name.Should().Be("Current");
+        result.SchemaVersion.Should().Be(2);
+        result.AppVersion.Should().Be("1.3.1");
+    }
+
+    [Fact]
+    public void Import_FutureSchemaVersion_ThrowsUnsupportedSchemaVersionException()
+    {
+        const string json = """{"schemaVersion":3,"name":"Future","isLoopMode":false,"slots":[]}""";
+
+        Action act = () => _sut.Import(json);
+
+        act.Should().Throw<UnsupportedSchemaVersionException>()
+            .Which.SchemaVersion.Should().Be(3);
+    }
+
+    [Fact]
+    public void Import_NonNumericSchemaVersion_ThrowsJsonException()
+    {
+        const string json = """{"schemaVersion":"3","name":"Bad","isLoopMode":false,"slots":[]}""";
+
+        Action act = () => _sut.Import(json);
+
+        act.Should().Throw<JsonException>();
+    }
+
+    [Fact]
+    public void Import_FutureSchemaVersion_WithUndeserializableSlot_StillThrowsUnsupportedSchemaVersionException()
+    {
+        // 未知のスロット型を含み、通常のデシリアライズなら JsonException になるはずのファイルでも、
+        // schemaVersion チェックが優先されて UnsupportedSchemaVersionException が投げられることを確認する。
+        const string json = """{"schemaVersion":3,"name":"Future","isLoopMode":false,"slots":[{"type":"unknown_future_slot_type","someField":123}]}""";
+
+        Action act = () => _sut.Import(json);
+
+        act.Should().Throw<UnsupportedSchemaVersionException>()
+            .Which.SchemaVersion.Should().Be(3);
     }
 }

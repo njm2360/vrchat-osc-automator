@@ -1,4 +1,6 @@
+using System.Reflection;
 using System.Text.Json;
+using VrcOscAutomator.Exceptions;
 using VrcOscAutomator.Interfaces;
 using VrcOscAutomator.Models;
 
@@ -6,6 +8,8 @@ namespace VrcOscAutomator.Services;
 
 public sealed class SequenceImportExportService : ISequenceImportExportService
 {
+    public const int CurrentSchemaVersion = 2;
+
     private static readonly JsonSerializerOptions Options = new()
     {
         WriteIndented = true,
@@ -14,11 +18,28 @@ public sealed class SequenceImportExportService : ISequenceImportExportService
         Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() },
     };
 
+    private static readonly string AppVersion =
+        Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.0.0";
+
     public string Export(string name, IEnumerable<SequenceSlot> slots, bool isLoopMode)
-        => JsonSerializer.Serialize(new ProfileExportData(name, slots.ToList(), isLoopMode), Options);
+        => JsonSerializer.Serialize(
+            new ProfileExportData(name, slots.ToList(), isLoopMode, CurrentSchemaVersion, AppVersion),
+            Options);
 
     public ProfileExportData? Import(string input)
     {
+        using (var document = JsonDocument.Parse(input))
+        {
+            if (document.RootElement.ValueKind == JsonValueKind.Object
+                && document.RootElement.TryGetProperty("schemaVersion", out var schemaVersionElement)
+                && schemaVersionElement.ValueKind == JsonValueKind.Number
+                && schemaVersionElement.TryGetInt32(out int schemaVersion)
+                && schemaVersion > CurrentSchemaVersion)
+            {
+                throw new UnsupportedSchemaVersionException(schemaVersion);
+            }
+        }
+
         var data = JsonSerializer.Deserialize<ProfileExportData>(input, Options);
         if (data is not null)
             ValidateSlots(data.Slots);

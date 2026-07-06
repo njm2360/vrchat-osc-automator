@@ -5,4 +5,6 @@ namespace VrcOscAutomator.Models;
 public record ProfileExportData(
     [property: JsonRequired] string Name,
     [property: JsonRequired] List<SequenceSlot> Slots,
-    [property: JsonRequired] bool IsLoopMode);
+    [property: JsonRequired] bool IsLoopMode,
+    int? SchemaVersion = null,
+    string? AppVersion = null);
