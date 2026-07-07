@@ -90,4 +90,28 @@ public class JsonSettingsRepositoryTests : IDisposable
         result.WasCorrupted.Should().BeFalse();
         result.Settings.Should().NotBeNull();
     }
+
+    [Fact]
+    public async Task LoadAsync_V1Migration_BacksUpOriginalFileBeforeOverwrite()
+    {
+        const string v1Json = """
+            {
+              "targets": [{ "ipAddress": "127.0.0.1", "port": 9000, "isEnabled": true }],
+              "profiles": [{ "name": "Legacy", "slots": [{ "address": "/x", "value": 0.5 }] }],
+              "isLoopMode": true
+            }
+            """;
+        await File.WriteAllTextAsync(_filePath, v1Json);
+
+        SettingsLoadResult result = await _sut.LoadAsync();
+
+        result.WasCorrupted.Should().BeFalse();
+        result.Settings.Profiles.Should().ContainSingle();
+
+        string backupDir = Path.Combine(_dir, "backup");
+        Directory.Exists(backupDir).Should().BeTrue();
+        string[] backups = Directory.GetFiles(backupDir, "settings_*.json");
+        backups.Should().ContainSingle();
+        (await File.ReadAllTextAsync(backups[0])).Should().Be(v1Json);
+    }
 }

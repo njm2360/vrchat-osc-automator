@@ -60,6 +60,7 @@ public sealed class JsonSettingsRepository(string? filePath = null) : ISettingsR
                 })],
             };
 
+            TryBackup();
             await SaveAsync(migrated);
             return new SettingsLoadResult(migrated);
         }
