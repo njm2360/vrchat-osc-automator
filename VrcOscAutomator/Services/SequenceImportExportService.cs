@@ -46,8 +46,11 @@ public sealed class SequenceImportExportService : ISequenceImportExportService
         return data;
     }
 
-    private static void ValidateSlots(IEnumerable<SequenceSlot> slots)
+    private static void ValidateSlots(IEnumerable<SequenceSlot>? slots)
     {
+        if (slots is null)
+            throw new JsonException("slots must not be null.");
+
         foreach (var slot in slots)
         {
             if (slot is null)

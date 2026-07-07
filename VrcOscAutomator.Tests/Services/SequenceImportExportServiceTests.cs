@@ -313,6 +313,7 @@ public class SequenceImportExportServiceTests
     }
 
     [Theory]
+    [InlineData("""{"slots":null,"name":"","isLoopMode":false}""")]  // slots 全体が null
     [InlineData("""{"slots":[null],"name":"","isLoopMode":false}""")]  // null スロット要素
     [InlineData("""{"slots":[{"type":"float","address":null,"value":0.5,"durationMs":500,"resetOnComplete":true,"transitionMode":"None"}],"name":"","isLoopMode":false}""")]  // address が null
     [InlineData("""{"slots":[{"type":"int","address":null,"value":1,"durationMs":500,"resetOnComplete":true,"transitionMode":"None"}],"name":"","isLoopMode":false}""")]  // IntSlot: address が null
