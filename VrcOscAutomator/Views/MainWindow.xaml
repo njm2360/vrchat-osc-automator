@@ -189,6 +189,8 @@
                                         Style="{StaticResource TabAddButtonStyle}"
                                         Command="{Binding DataContext.AddProfileCommand,
                                                           RelativeSource={RelativeSource AncestorType=Window}}"
+                                        IsEnabled="{Binding DataContext.IsNotPlaying,
+                                                            RelativeSource={RelativeSource AncestorType=Window}}"
                                         ToolTip="プロファイルを追加" />
                                 <ScrollViewer x:Name="TabStripScrollViewer"
                                               Style="{StaticResource TabStripScrollViewerStyle}"
