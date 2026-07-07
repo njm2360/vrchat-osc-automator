@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Net;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using VrcOscAutomator.Models;
@@ -56,5 +57,18 @@ public sealed partial class SendTargetsViewModel : ObservableObject
         if (duplicates.Count == 0) return null;
 
         return "送信先が重複しています:\n" + string.Join("\n", duplicates);
+    }
+
+    // IPアドレスとして解釈できない行がある場合はエラー
+    public string? GetInvalidIpError()
+    {
+        var invalid = Targets
+            .Where(t => !IPAddress.TryParse(t.IpAddress.Trim(), out _))
+            .Select(t => t.IpAddress.Trim() is { Length: > 0 } s ? s : "(空欄)")
+            .ToList();
+
+        if (invalid.Count == 0) return null;
+
+        return "IPアドレスの形式が正しくありません:\n" + string.Join("\n", invalid);
     }
 }

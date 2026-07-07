@@ -14,9 +14,14 @@ public sealed class OscSenderService : IOscSender
 
     public void SetTargets(IEnumerable<OscTarget> targets)
     {
+        // 不正なIP・ポートなエントリはスキップする
         _endpoints = targets
-            .Where(t => t.IsEnabled)
-            .Select(t => new IPEndPoint(IPAddress.Parse(t.IpAddress), t.Port))
+            .Where(t => t.IsEnabled && t.Port is >= IPEndPoint.MinPort and <= IPEndPoint.MaxPort)
+            .Select(t => IPAddress.TryParse(t.IpAddress?.Trim(), out IPAddress? ip)
+                ? new IPEndPoint(ip, t.Port)
+                : null)
+            .Where(ep => ep is not null)
+            .Select(ep => ep!)
             .ToList();
     }
 

@@ -184,4 +184,95 @@ public class SendTargetsViewModelTests
     {
         _sut.GetDuplicateError().Should().BeNull();
     }
+
+    // ─── GetInvalidIpError ────────────────────────────────────────────────
+
+    [Fact]
+    public void GetInvalidIpError_AllValidIpv4_ReturnsNull()
+    {
+        _sut.LoadFromModels([
+            new OscTarget { IpAddress = "127.0.0.1", Port = 9000 },
+            new OscTarget { IpAddress = "192.168.1.100", Port = 9001 },
+        ]);
+
+        _sut.GetInvalidIpError().Should().BeNull();
+    }
+
+    [Fact]
+    public void GetInvalidIpError_ValidIpv6_ReturnsNull()
+    {
+        _sut.LoadFromModels([
+            new OscTarget { IpAddress = "::1", Port = 9000 },
+            new OscTarget { IpAddress = "fe80::1", Port = 9001 },
+        ]);
+
+        _sut.GetInvalidIpError().Should().BeNull();
+    }
+
+    [Fact]
+    public void GetInvalidIpError_MalformedIp_ReturnsErrorMessage()
+    {
+        _sut.LoadFromModels([
+            new OscTarget { IpAddress = "not-an-ip", Port = 9000 },
+        ]);
+
+        string? error = _sut.GetInvalidIpError();
+
+        error.Should().NotBeNull();
+        error.Should().Contain("not-an-ip");
+    }
+
+    [Fact]
+    public void GetInvalidIpError_OutOfRangeOctet_ReturnsErrorMessage()
+    {
+        _sut.LoadFromModels([
+            new OscTarget { IpAddress = "999.1.1.1", Port = 9000 },
+        ]);
+
+        _sut.GetInvalidIpError().Should().NotBeNull();
+    }
+
+    [Fact]
+    public void GetInvalidIpError_EmptyAddress_ReturnsErrorMessage()
+    {
+        _sut.LoadFromModels([
+            new OscTarget { IpAddress = "", Port = 9000 },
+        ]);
+
+        string? error = _sut.GetInvalidIpError();
+
+        error.Should().NotBeNull();
+        error.Should().Contain("(空欄)");
+    }
+
+    [Fact]
+    public void GetInvalidIpError_ReportsAllInvalidRows()
+    {
+        _sut.LoadFromModels([
+            new OscTarget { IpAddress = "127.0.0.1", Port = 9000 },
+            new OscTarget { IpAddress = "bad1", Port = 9001 },
+            new OscTarget { IpAddress = "bad2", Port = 9002 },
+        ]);
+
+        string? error = _sut.GetInvalidIpError();
+
+        error.Should().Contain("bad1");
+        error.Should().Contain("bad2");
+    }
+
+    [Fact]
+    public void GetInvalidIpError_TrimsSurroundingWhitespace()
+    {
+        _sut.LoadFromModels([
+            new OscTarget { IpAddress = " 127.0.0.1 ", Port = 9000 },
+        ]);
+
+        _sut.GetInvalidIpError().Should().BeNull();
+    }
+
+    [Fact]
+    public void GetInvalidIpError_EmptyList_ReturnsNull()
+    {
+        _sut.GetInvalidIpError().Should().BeNull();
+    }
 }
