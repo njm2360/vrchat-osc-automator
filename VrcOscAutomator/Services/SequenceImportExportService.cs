@@ -50,6 +50,12 @@ public sealed class SequenceImportExportService : ISequenceImportExportService
     {
         foreach (var slot in slots)
         {
+            if (slot is null)
+                throw new JsonException("slots must not contain null.");
+
+            if (slot is OscSlot { Address: null })
+                throw new JsonException("address must not be null.");
+
             if (slot is FloatSlot { TransitionMode: not TransitionMode.None } f && (f.TransitionFromValue is null || f.TransitionToValue is null)
              || slot is IntSlot { TransitionMode: not TransitionMode.None } n && (n.TransitionFromValue is null || n.TransitionToValue is null))
                 throw new JsonException(

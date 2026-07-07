@@ -312,6 +312,17 @@ public class SequenceImportExportServiceTests
             .Which.SchemaVersion.Should().Be(3);
     }
 
+    [Theory]
+    [InlineData("""{"slots":[null],"name":"","isLoopMode":false}""")]  // null スロット要素
+    [InlineData("""{"slots":[{"type":"float","address":null,"value":0.5,"durationMs":500,"resetOnComplete":true,"transitionMode":"None"}],"name":"","isLoopMode":false}""")]  // address が null
+    [InlineData("""{"slots":[{"type":"int","address":null,"value":1,"durationMs":500,"resetOnComplete":true,"transitionMode":"None"}],"name":"","isLoopMode":false}""")]  // IntSlot: address が null
+    public void Import_NullSlotOrNullAddress_ThrowsJsonException(string json)
+    {
+        Action act = () => _sut.Import(json);
+
+        act.Should().Throw<JsonException>();
+    }
+
     [Fact]
     public void Import_NonNumericSchemaVersion_ThrowsJsonException()
     {
