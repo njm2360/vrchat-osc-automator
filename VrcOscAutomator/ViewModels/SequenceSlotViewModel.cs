@@ -93,16 +93,25 @@ public sealed partial class SequenceSlotViewModel : ObservableObject
     // ランダム待機の最小・最大時間
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
+    [NotifyPropertyChangedFor(nameof(IsValid))]
     public partial int RandomWaitMinMs { get; set; } = 300;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ParameterSummary))]
+    [NotifyPropertyChangedFor(nameof(IsValid))]
     public partial int RandomWaitMaxMs { get; set; } = 1000;
 
     // ── UI 表示切り替え用プロパティ ───────────────────────────────────────
 
-    // OSCアドレスが有効な形式か
-    public bool IsValid => SelectedPreset is not CustomPreset || OscAddressRegex().IsMatch(CustomAddress);
+    // スロット設定が有効か
+    // - Customプリセット: OSCアドレスが正しい形式であること
+    // - RandomWaitプリセット: 0 <= Min <= Max であること
+    public bool IsValid => SelectedPreset switch
+    {
+        CustomPreset => OscAddressRegex().IsMatch(CustomAddress),
+        RandomWaitPreset => RandomWaitMinMs >= 0 && RandomWaitMaxMs >= RandomWaitMinMs,
+        _ => true,
+    };
     // 完了後に0に戻すチェックボックスを表示するか
     public bool ShowResetOption => SelectedPreset is BuiltinPreset;
     // 時間入力欄が編集可能か

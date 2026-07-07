@@ -54,6 +54,10 @@ public sealed class SequenceImportExportService : ISequenceImportExportService
              || slot is IntSlot { TransitionMode: not TransitionMode.None } n && (n.TransitionFromValue is null || n.TransitionToValue is null))
                 throw new JsonException(
                     "transitionFromValue and transitionToValue are required when transitionMode is not None.");
+
+            if (slot is RandomWaitSlot rw && (rw.MinMs < 0 || rw.MaxMs < rw.MinMs))
+                throw new JsonException(
+                    "random_wait requires minMs >= 0 and maxMs >= minMs.");
         }
     }
 }

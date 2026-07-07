@@ -202,6 +202,52 @@ public class SequenceImportExportServiceTests
         result!.Slots.Should().BeEquivalentTo(slots, o => o.RespectingRuntimeTypes());
     }
 
+    // ─── RandomWaitSlot バリデーション ────────────────────────────────────
+
+    [Fact]
+    public void Import_RandomWait_ValidRange_RoundTrips()
+    {
+        var slots = new SequenceSlot[] { new RandomWaitSlot(300, 1000) };
+
+        string json = _sut.Export("Rand", slots, false);
+        ProfileExportData? result = _sut.Import(json);
+
+        result.Should().NotBeNull();
+        result!.Slots.Should().ContainSingle();
+        result.Slots[0].Should().Be(new RandomWaitSlot(300, 1000));
+    }
+
+    [Fact]
+    public void Import_RandomWait_MinEqualsMax_Imports()
+    {
+        const string json = """{"name":"","isLoopMode":false,"slots":[{"type":"random_wait","minMs":500,"maxMs":500}]}""";
+
+        ProfileExportData? result = _sut.Import(json);
+
+        result.Should().NotBeNull();
+        result!.Slots.Should().ContainSingle();
+    }
+
+    [Fact]
+    public void Import_RandomWait_MinGreaterThanMax_ThrowsJsonException()
+    {
+        const string json = """{"name":"","isLoopMode":false,"slots":[{"type":"random_wait","minMs":1000,"maxMs":300}]}""";
+
+        Action act = () => _sut.Import(json);
+
+        act.Should().Throw<JsonException>();
+    }
+
+    [Fact]
+    public void Import_RandomWait_NegativeMin_ThrowsJsonException()
+    {
+        const string json = """{"name":"","isLoopMode":false,"slots":[{"type":"random_wait","minMs":-1,"maxMs":300}]}""";
+
+        Action act = () => _sut.Import(json);
+
+        act.Should().Throw<JsonException>();
+    }
+
     // ─── スキーマバージョン ────────────────────────────────────────────────
 
     [Fact]
