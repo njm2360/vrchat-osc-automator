@@ -86,6 +86,41 @@ public class MainWindowViewModelTests
         secondName.Should().NotBe(_sut.Profiles[0].Name);
     }
 
+    [Fact]
+    public void AddProfile_CanExecute_TrueWhenNotPlaying()
+    {
+        _sut.IsPlaying = false;
+
+        _sut.AddProfileCommand.CanExecute(null).Should().BeTrue();
+    }
+
+    [Fact]
+    public void AddProfile_CanExecute_FalseWhilePlaying()
+    {
+        _sut.IsPlaying = true;
+
+        _sut.AddProfileCommand.CanExecute(null).Should().BeFalse();
+    }
+
+    [Fact]
+    public void AddProfile_CanExecute_BecomesTrueAfterStopping()
+    {
+        _sut.IsPlaying = true;
+        _sut.AddProfileCommand.CanExecute(null).Should().BeFalse();
+
+        _sut.IsPlaying = false;
+
+        _sut.AddProfileCommand.CanExecute(null).Should().BeTrue();
+    }
+
+    [Fact]
+    public void DeleteProfile_CanExecute_FalseWhilePlaying()
+    {
+        _sut.IsPlaying = true;
+
+        _sut.DeleteProfileCommand.CanExecute(_sut.Profiles[0]).Should().BeFalse();
+    }
+
     // ─── DeleteProfileCommand ─────────────────────────────────────────────
 
     [Fact]

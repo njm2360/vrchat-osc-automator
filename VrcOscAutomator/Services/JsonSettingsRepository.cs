@@ -6,13 +6,14 @@ using VrcOscAutomator.Models;
 
 namespace VrcOscAutomator.Services;
 
-public sealed class JsonSettingsRepository : ISettingsRepository
+public sealed class JsonSettingsRepository(string? filePath = null) : ISettingsRepository
 {
-    private static readonly string FilePath = Path.Combine(
+    private static readonly string DefaultFilePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         Assembly.GetExecutingAssembly().GetName().Name!,
         "settings.json");
 
+    private readonly string FilePath = filePath ?? DefaultFilePath;
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
@@ -59,6 +60,7 @@ public sealed class JsonSettingsRepository : ISettingsRepository
                 })],
             };
 
+            TryBackup();
             await SaveAsync(migrated);
             return new SettingsLoadResult(migrated);
         }
@@ -74,7 +76,7 @@ public sealed class JsonSettingsRepository : ISettingsRepository
         }
     }
 
-    private static string? TryBackup()
+    private string? TryBackup()
     {
         try
         {
@@ -94,8 +96,13 @@ public sealed class JsonSettingsRepository : ISettingsRepository
     public async Task SaveAsync(AppSettings settings)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
-        await using FileStream fs = File.Create(FilePath);
-        await JsonSerializer.SerializeAsync(fs, settings, JsonOptions);
+
+        string tmpPath = FilePath + ".tmp";
+        await using (FileStream fs = File.Create(tmpPath))
+        {
+            await JsonSerializer.SerializeAsync(fs, settings, JsonOptions);
+        }
+        File.Move(tmpPath, FilePath, overwrite: true);
     }
 
     private static int GetVersion(string json)

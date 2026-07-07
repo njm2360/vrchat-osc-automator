@@ -78,7 +78,10 @@ public record RandomWaitSlot(
     [property: JsonRequired] int MinMs,
     [property: JsonRequired] int MaxMs) : SequenceSlot
 {
-    public override int GetDurationMs() => Random.Shared.Next(MinMs, MaxMs + 1);
+    // MaxMs <= MinMs の場合は MinMs を返す（Min>Max による例外を防止）。
+    // long 経由でオーバーフロー（MaxMs=int.MaxValue で MaxMs+1 が桁あふれ）も回避する。
+    public override int GetDurationMs() =>
+        MaxMs <= MinMs ? MinMs : (int)Random.Shared.NextInt64(MinMs, (long)MaxMs + 1);
 }
 
 /// <summary>繰り返しブロックの開始マーカー。</summary>

@@ -37,6 +37,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(StartCommand))]
     [NotifyCanExecuteChangedFor(nameof(StopCommand))]
     [NotifyCanExecuteChangedFor(nameof(PauseResumeCommand))]
+    [NotifyCanExecuteChangedFor(nameof(AddProfileCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DeleteProfileCommand))]
     public partial bool IsPlaying { get; set; }
 
     [ObservableProperty]
@@ -208,8 +210,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     // ── プロファイル操作コマンド ──────────────────────────────────────────
 
-    // 重複しない名前で新規プロファイルを追加
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(IsNotPlaying))]
     private async Task AddProfileAsync()
     {
         int n = Profiles.Count + 1;
@@ -219,8 +220,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         await SaveAsync();
     }
 
-    // 確認ダイアログ後に削除し、隣のプロファイルを選択
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(IsNotPlaying))]
     private async Task DeleteProfileAsync(ProfileViewModel profile)
     {
         if (!_dialogService.ConfirmDeleteProfile(profile.Name)) return;

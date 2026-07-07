@@ -14,7 +14,7 @@ public partial class SendTargetsWindow : Window
     {
         if (DataContext is SendTargetsViewModel vm)
         {
-            string? error = vm.GetDuplicateError();
+            string? error = vm.GetInvalidIpError() ?? vm.GetDuplicateError();
             if (error is not null)
             {
                 MessageBox.Show(this, error, "保存できません", MessageBoxButton.OK, MessageBoxImage.Error);

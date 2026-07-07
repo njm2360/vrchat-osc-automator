@@ -16,6 +16,7 @@ public class SequenceSlotViewModelTests
     private static SlotPreset LoopBeginPreset => SlotPreset.All.First(p => p.IsLoopBegin);
     private static SlotPreset LoopEndPreset => SlotPreset.All.First(p => p.IsLoopEnd);
     private static SlotPreset BreakpointPreset => SlotPreset.All.First(p => p.IsBreakpoint);
+    private static SlotPreset RandomWaitPreset => SlotPreset.All.First(p => p.IsRandomWait);
 
     // ─── IsValid ──────────────────────────────────────────────────────────
 
@@ -87,6 +88,74 @@ public class SequenceSlotViewModelTests
             SelectedPreset = CustomPreset,
             CustomAddress = address,
         };
+        vm.IsValid.Should().BeFalse();
+    }
+
+    // ─── IsValid (RandomWait) ────────────────────────────────────────────
+
+    [Fact]
+    public void IsValid_RandomWait_MinLessThanMax_True()
+    {
+        var vm = new SequenceSlotViewModel
+        {
+            SelectedPreset = RandomWaitPreset,
+            RandomWaitMinMs = 300,
+            RandomWaitMaxMs = 1000,
+        };
+        vm.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsValid_RandomWait_MinEqualsMax_True()
+    {
+        var vm = new SequenceSlotViewModel
+        {
+            SelectedPreset = RandomWaitPreset,
+            RandomWaitMinMs = 500,
+            RandomWaitMaxMs = 500,
+        };
+        vm.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsValid_RandomWait_MinGreaterThanMax_False()
+    {
+        var vm = new SequenceSlotViewModel
+        {
+            SelectedPreset = RandomWaitPreset,
+            RandomWaitMinMs = 1000,
+            RandomWaitMaxMs = 300,
+        };
+        vm.IsValid.Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsValid_RandomWait_NegativeMin_False()
+    {
+        var vm = new SequenceSlotViewModel
+        {
+            SelectedPreset = RandomWaitPreset,
+            RandomWaitMinMs = -1,
+            RandomWaitMaxMs = 1000,
+        };
+        vm.IsValid.Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsValid_RandomWait_ChangingMaxRaisesIsValidNotification()
+    {
+        var vm = new SequenceSlotViewModel
+        {
+            SelectedPreset = RandomWaitPreset,
+            RandomWaitMinMs = 300,
+            RandomWaitMaxMs = 1000,
+        };
+        bool raised = false;
+        vm.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(vm.IsValid)) raised = true; };
+
+        vm.RandomWaitMaxMs = 100; // Min > Max にして無効化
+
+        raised.Should().BeTrue();
         vm.IsValid.Should().BeFalse();
     }
 
