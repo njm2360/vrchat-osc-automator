@@ -1,5 +1,6 @@
-using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Interop;
+using System.Windows.Media;
 using System.Windows.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using VrcOscAutomator.Interfaces;
@@ -17,6 +18,9 @@ public partial class App : Application
 
         DispatcherUnhandledException += OnDispatcherUnhandledException;
         TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
+
+        if (e.Args.Contains("--software-rendering", StringComparer.OrdinalIgnoreCase))
+            RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;
 
         ServiceCollection services = new();
         services.AddSingleton<IOscSender, OscSenderService>();
