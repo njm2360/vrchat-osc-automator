@@ -20,6 +20,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly IMouseSender _mouseSender;
     private readonly ISequenceImportExportService _importExport;
 
+    private AppSettings _settings = new();
+
     // 設定ファイルから読み込んだ OSC 送信先・ホットキー・キーリピート設定
     private List<OscTarget> _targets = [];
     private HotkeySettings _hotkeys = new();
@@ -240,6 +242,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         if (loadResult.WasCorrupted)
             _dialogService.ShowError(loadResult.CorruptionDetail!);
         AppSettings settings = loadResult.Settings;
+        _settings = settings;
         _targets = settings.Targets;
         _oscSender.SetTargets(_targets);
         _hotkeys = settings.Hotkeys;
@@ -390,14 +393,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private async Task SaveAsync()
     {
-        AppSettings settings = new()
-        {
-            Targets = _targets,
-            Profiles = [.. Profiles.Select(p => p.ToModel())],
-            Hotkeys = _hotkeys,
-            KeyRepeat = _keyRepeat,
-            Input = new InputSettings { KeyboardMode = KeyboardMode, MouseMode = MouseMode },
-        };
-        await _repository.SaveAsync(settings);
+        _settings.Targets = _targets;
+        _settings.Profiles = [.. Profiles.Select(p => p.ToModel())];
+        _settings.Hotkeys = _hotkeys;
+        _settings.KeyRepeat = _keyRepeat;
+        _settings.Input = new InputSettings { KeyboardMode = KeyboardMode, MouseMode = MouseMode };
+        await _repository.SaveAsync(_settings);
     }
 }
