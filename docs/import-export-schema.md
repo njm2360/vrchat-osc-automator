@@ -10,20 +10,20 @@
 ```json
 {
   "schemaVersion": 2,
-  "appVersion": "1.3.1",
+  "appVersion": "1.3.2",
   "name": "プロファイル名",
   "isLoopMode": false,
   "slots": [ ... ]
 }
 ```
 
-| フィールド      | 型      | 必須 | 説明                                                       |
-| --------------- | ------- | ---- | ----------------------------------------------------------- |
+| フィールド      | 型      | 必須 | 説明                                                         |
+| --------------- | ------- | ---- | ------------------------------------------------------------ |
 | `schemaVersion` | integer |      | このJSONのスキーマバージョン。省略時はレガシー形式として扱う |
-| `appVersion`    | string  |      | 書き出したアプリのバージョン（例: `"1.3.1"`）。参考情報      |
-| `name`          | string  | ✓    | プロファイルの表示名                                        |
-| `isLoopMode`    | boolean | ✓    | シーケンス終端で先頭に戻るか                                |
-| `slots`         | array   | ✓    | スロットの配列（空不可）                                     |
+| `appVersion`    | string  |      | 書き出したアプリのバージョン（例: `"1.3.2"`）。参考情報      |
+| `name`          | string  | ✓    | プロファイルの表示名                                         |
+| `isLoopMode`    | boolean | ✓    | シーケンス終端で先頭に戻るか                                 |
+| `slots`         | array   | ✓    | スロットの配列                                               |
 
 ---
 
@@ -35,22 +35,13 @@
 - 数値は JSON number 型（整数・浮動小数）
 - 列挙型フィールド（`transitionMode` / `action` / `button` / `mode`）は 文字列名（例: `"Linear"`、`"PressAndRelease"`）で表現する
 
-> **バージョン互換に関する注意（v1.3.0）**
-> v1.3.0で列挙型フィールドの書き出し形式が整数から文字列名（例: `"PressAndRelease"`）に変更された。
->
-> - v1.3.0は旧形式（整数）・新形式（文字列）どちらのJSONも読み込める（後方互換あり）。
-> - v1.3.0が書き出したJSONはv1.2.0以前では読み込めない（前方互換なし）。旧バージョンで開くファイルには整数値を使うこと。
+## バージョン互換
 
----
-
-> **バージョン互換に関する注意（v1.3.1）**
-> v1.3.1で `schemaVersion` / `appVersion` フィールドが導入された。v1.2.0・v1.3.0はどちらもこのフィールドを書き出さない。
->
-> 読み込み時の判定ルール:
->
-> - `schemaVersion` が **無い** 場合: レガシー形式（v1.2.0 または v1.3.0）として読み込む。enum が整数・文字列のどちらで書かれていても読める。
-> - `schemaVersion` が **現在のスキーマバージョン（2）以下** の場合: 通常どおり読み込む。
-> - `schemaVersion` が **現在のスキーマバージョンより大きい** 場合: このアプリより新しいバージョンで作成されたファイルとみなし、読み込みを拒否してアプリの更新を促すエラーを表示する。
+- 列挙型の書き出しはv1.3.0で整数から文字列名に変わった。読み込みはどちらの形式でも通る。v1.2.0以前で開くファイルを作る場合だけ整数値を使うこと。
+- `schemaVersion` / `appVersion` はv1.3.1以降が書き出す。読み込み時の判定は次のとおり。
+  - `schemaVersion` が無い: レガシー形式（v1.3.0以前）として読み込む
+  - 現在のスキーマバージョン（2）以下: 通常どおり読み込む
+  - 2より大きい: より新しいアプリで作成されたファイルとみなして読み込みを拒否し、アプリの更新を促すエラーを表示する
 
 ---
 
@@ -73,15 +64,15 @@
 }
 ```
 
-| フィールド            | 型      | 説明                                             |
-| --------------------- | ------- | ------------------------------------------------ |
-| `address`             | string  | OSC アドレス（`/` 始まり）                       |
-| `value`               | number  | 送信する float 値（`transitionMode: "None"` 時） |
-| `durationMs`          | integer | 待機時間（ms）。補間時は補間継続時間             |
-| `resetOnComplete`     | boolean | 完了後に 0.0 に戻す                              |
-| `transitionMode`      | string  | 値の補間モード（下記参照）。省略時は `"None"`    |
-| `transitionFromValue` | number  | トランジション開始値                             |
-| `transitionToValue`   | number  | トランジション終了値                             |
+| フィールド            | 型      | 説明                                                              |
+| --------------------- | ------- | ----------------------------------------------------------------- |
+| `address`             | string  | OSC アドレス（`/` 始まり）                                        |
+| `value`               | number  | 送信する float 値（`transitionMode: "None"` 時）                  |
+| `durationMs`          | integer | 待機時間（ms）。補間時は補間継続時間                              |
+| `resetOnComplete`     | boolean | 完了後に 0.0 に戻す                                               |
+| `transitionMode`      | string  | 値の補間モード（下記参照）。省略時は `"None"`                     |
+| `transitionFromValue` | number  | トランジション開始値。`transitionMode` が `"None"` 以外のとき必須 |
+| `transitionToValue`   | number  | トランジション終了値。同上                                        |
 
 **transitionMode 値:**
 
@@ -110,15 +101,15 @@
 }
 ```
 
-| フィールド            | 型      | 説明                                           |
-| --------------------- | ------- | ---------------------------------------------- |
-| `address`             | string  | OSC アドレス                                   |
-| `value`               | integer | 送信する int 値（`transitionMode: "None"` 時） |
-| `durationMs`          | integer | 待機時間（ms）。補間時は補間継続時間           |
-| `resetOnComplete`     | boolean | 完了後に 0 に戻す                              |
-| `transitionMode`      | string  | 補間モード（`float` セクション参照）           |
-| `transitionFromValue` | integer | トランジション開始値                           |
-| `transitionToValue`   | integer | トランジション終了値                           |
+| フィールド            | 型      | 説明                                                              |
+| --------------------- | ------- | ----------------------------------------------------------------- |
+| `address`             | string  | OSC アドレス                                                      |
+| `value`               | integer | 送信する int 値（`transitionMode: "None"` 時）                    |
+| `durationMs`          | integer | 待機時間（ms）。補間時は補間継続時間                              |
+| `resetOnComplete`     | boolean | 完了後に 0 に戻す                                                 |
+| `transitionMode`      | string  | 補間モード（`float` セクション参照）                              |
+| `transitionFromValue` | integer | トランジション開始値。`transitionMode` が `"None"` 以外のとき必須 |
+| `transitionToValue`   | integer | トランジション終了値。同上                                        |
 
 ---
 
@@ -379,7 +370,7 @@ OSC 送信は行わず、指定時間だけ待機する。
 ```json
 {
   "schemaVersion": 2,
-  "appVersion": "1.3.1",
+  "appVersion": "1.3.2",
   "name": "ジャンプ3回",
   "isLoopMode": false,
   "slots": [
