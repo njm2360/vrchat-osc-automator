@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat Code Coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <!-- WPF UI層, Win32/外部依存サービス を除外 -->
+          <Exclude>[VrcOscAutomator]VrcOscAutomator.Views.*,[VrcOscAutomator]VrcOscAutomator.Converters.*,[VrcOscAutomator]VrcOscAutomator.Behaviors.*,[VrcOscAutomator]VrcOscAutomator.App,[VrcOscAutomator]VrcOscAutomator.Services.DialogService,[VrcOscAutomator]VrcOscAutomator.Services.GlobalHotkeyService,[VrcOscAutomator]VrcOscAutomator.Services.KeyboardSenderService,[VrcOscAutomator]VrcOscAutomator.Services.MouseSenderService</Exclude>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>
