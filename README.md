@@ -1,6 +1,7 @@
 # VrcOscAutomator
 
 [![CI](https://github.com/njm2360/vrchat-osc-automator/actions/workflows/ci.yml/badge.svg)](https://github.com/njm2360/vrchat-osc-automator/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/njm2360/vrchat-osc-automator/graph/badge.svg)](https://codecov.io/gh/njm2360/vrchat-osc-automator)
 [![Release](https://github.com/njm2360/vrchat-osc-automator/actions/workflows/release.yml/badge.svg)](https://github.com/njm2360/vrchat-osc-automator/actions/workflows/release.yml)
 ![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)
 ![Platform](https://img.shields.io/badge/platform-Windows-0078D4?logo=windows)
