@@ -5,28 +5,56 @@ on:
     tags:
       - "v*"
 
+permissions:
+  contents: write
+
 jobs:
-
   release:
-
     runs-on: windows-latest
 
-    permissions:
-      contents: write
-
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-    - name: Install .NET Core
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 10.0.x
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
 
-    - name: Publish
-      run: dotnet publish VrcOscAutomator\VrcOscAutomator.csproj --configuration Release --output publish\
+      - name: Resolve version from tag
+        id: version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          $version = $env:TAG -replace '^v', ''
+          if ($version -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$') {
+            throw "Unexpected tag format: $env:TAG (expected vMAJOR.MINOR.PATCH)"
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
 
-    - name: Upload to GitHub Releases
-      uses: softprops/action-gh-release@v2
-      with:
-        files: publish\VrcOscAutomator.exe
+      - name: Test
+        run: dotnet test VrcOscAutomator.Tests\VrcOscAutomator.Tests.csproj --configuration Release
+
+      - name: Publish
+        run: >
+          dotnet publish VrcOscAutomator\VrcOscAutomator.csproj
+          --configuration Release
+          --runtime win-x64
+          --self-contained false
+          -p:PublishSingleFile=true
+          -p:DebugType=none
+          -p:Version=${{ steps.version.outputs.version }}
+          -p:IncludeSourceRevisionInInformationalVersion=false
+          --output publish\
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          $ghArgs = @(
+            $env:TAG
+            'publish/VrcOscAutomator.exe'
+            '--title', $env:TAG
+            '--generate-notes'
+          )
+          if ($env:TAG -match '-') { $ghArgs += '--prerelease' }
+          gh release create @ghArgs
