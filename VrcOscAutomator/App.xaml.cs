@@ -14,10 +14,11 @@ public partial class App : Application
 {
     protected override void OnStartup(StartupEventArgs e)
     {
-        base.OnStartup(e);
-
         DispatcherUnhandledException += OnDispatcherUnhandledException;
+        AppDomain.CurrentDomain.UnhandledException += OnAppDomainUnhandledException;
         TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
+
+        base.OnStartup(e);
 
         if (e.Args.Contains("--software-rendering", StringComparer.OrdinalIgnoreCase))
             RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;
@@ -44,16 +45,31 @@ public partial class App : Application
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
+        e.Handled = true;
+        HandleFatal("DispatcherUnhandledException", e.Exception);
+    }
+
+    private static void OnAppDomainUnhandledException(object sender, UnhandledExceptionEventArgs e)
+    {
+        CrashLogger.Log("AppDomainUnhandledException", e.ExceptionObject as Exception);
+    }
+
+    private static void OnUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
+    {
+        CrashLogger.Log("UnobservedTaskException", e.Exception);
+    }
+
+    private void HandleFatal(string source, Exception ex)
+    {
+        CrashLogger.Log(source, ex);
+
         MessageBox.Show(
-            $"予期しないエラーが発生しました。\n\n{e.Exception.Message}",
+            $"予期しないエラーが発生しました。アプリケーションを終了します。\n\n{ex.Message}\n\n" +
+            $"エラーログ\n{CrashLogger.LogPath}",
             "エラー",
             MessageBoxButton.OK,
             MessageBoxImage.Error);
-        e.Handled = true;
-    }
 
-    private void OnUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
-    {
-        e.SetObserved();
+        Shutdown(1);
     }
 }
